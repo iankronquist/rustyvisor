@@ -2,8 +2,10 @@
 #![feature(asm)]
 #![no_std]
 
+
 mod runtime;
-mod vmx;
+pub mod vmx;
+
 
 pub type CChar = i8;
 
