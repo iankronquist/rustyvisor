@@ -1,6 +1,6 @@
 # RustyVisor
 
-An hypervisor written in Rust.
+A hypervisor written in Rust.
 
 The goal of this project is to learn more Rust and determine whether Rust is
 a significant improvement over C for systems programming tasks like
