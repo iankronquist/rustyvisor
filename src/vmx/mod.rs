@@ -1,9 +1,11 @@
-#[allow(dead_code)]
-#[allow(non_camel_case_types)]
-
 pub struct CPUTableDescriptor {
-    limit: u16,
-    base: u64,
+    pub limit: u16,
+    pub base: u64,
+}
+
+#[repr(u32)]
+pub enum MSR {
+    EFER = 0xc0000080,
 }
 
 #[repr(u64)]
@@ -257,6 +259,32 @@ pub fn vmwrite(field: VMCSField, val: u64) -> Result<(), u32> {
         Ok(())
     } else {
         Err(ret)
+    }
+}
+
+pub fn rdmsr(msr: MSR) -> (u32, u32) {
+    let edx: u32;
+    let eax: u32;
+    unsafe {
+        asm!(
+            "rdmsr"
+             : "={eax}"(eax) "={edx}"(edx)
+             : "{ecx}"(msr)
+             :
+            );
+    }
+    (edx, eax)
+}
+
+pub fn wrmsr(msr: MSR, eax: u32, edx: u32) {
+    unsafe {
+        asm!(
+            "mov $1, %ecx; \
+             wrmsr"
+             :
+             : "{ecx}"(msr) "{eax}"(eax) "{edx}"(edx)
+             :
+            );
     }
 }
 
