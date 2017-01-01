@@ -190,7 +190,7 @@ pub enum VMCSField {
 
 
 
-pub fn vmxon(addr: u32) -> Result<(), u32> {
+pub fn vmxon(addr: u64) -> Result<(), u32> {
     let ret: u32;
     unsafe {
         asm!(
