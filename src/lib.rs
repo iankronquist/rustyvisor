@@ -19,8 +19,9 @@ extern "C" {
 
 
 #[no_mangle]
-pub extern "C" fn entry() {
+pub extern "C" fn entry(_: *mut CChar, _: *mut CChar, _: u64) -> u32 {
     unsafe {
         printk(cstring!("Hello Linux!\n"));
     }
+    return 0;
 }
