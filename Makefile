@@ -12,7 +12,7 @@ all: $(MODULENAME).ko
 $(MODULENAME).ko: loader/linux.c target/$(RELEASE)/lib$(MODULENAME).a
 	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules
 
-target/$(RELEASE)/librustyvisor.a: src/*.rs src/*/*.rs Cargo.toml
+target/$(RELEASE)/librustyvisor.a: src/*.rs Cargo.toml
 	RUSTFLAGS='-C relocation-model=static' $(CARGO) build
 
 clean:
