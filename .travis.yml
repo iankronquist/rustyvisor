@@ -1,17 +1,20 @@
 language: rust
 os: linux
 sudo: required
+cache: cargo
 rust:
   - nightly
 
 install:
-  - curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain=$TRAVIS_RUST_VERSION -y
+  - if [[ ! -e $HOME/.cargo/bin/rustup ]]; then
+      curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain=$TRAVIS_RUST_VERSION -y
+    fi
   - source ~/.cargo/env
   - rustup component add rust-src
   - sudo apt-get install linux-headers-$(uname -r)
-  - cargo install xargo
-  - cargo install rustfmt
-  - cargo install clippy
+  - cargo install xargo || true
+  - cargo install rustfmt || true
+  - cargo install clippy || true
 
 script:
   - make
