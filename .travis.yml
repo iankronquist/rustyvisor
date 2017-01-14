@@ -11,9 +11,14 @@ install:
   - rustup component add rust-src
   - sudo apt-get install linux-headers-$(uname -r)
   - cargo install xargo
+  - cargo install clippy
 
 script:
   - make
   - make test
+  - cargo clippy -- -D clippy
+  - cargo fmt -- --write-mode overwrite
+  - git diff-index --quiet HEAD
+  - git diff-index HEAD
   - sudo insmod rustyvisor.ko
   - sudo rmmod rustyvisor.ko
