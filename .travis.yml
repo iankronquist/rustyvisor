@@ -7,7 +7,7 @@ rust:
 
 install:
   - if [[ ! -e $HOME/.cargo/bin/rustup ]]; then
-      curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain=$TRAVIS_RUST_VERSION -y
+      curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain=$TRAVIS_RUST_VERSION -y;
     fi
   - source ~/.cargo/env
   - rustup component add rust-src
