@@ -3,7 +3,5 @@ name = "rustyvisor"
 version = "0.1.0"
 authors = ["Ian Kronquist <iankronquist@gmail.com>"]
 
-[dependencies]
-
 [lib]
 crate_type = ["staticlib"]
