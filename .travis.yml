@@ -5,6 +5,7 @@ rust:
   - nightly
 
 install:
+  - export PATH=$PATH:$HOME/.cargo/bin
   - sudo apt-get install linux-headers-$(uname -r)
   - cargo install xargo
 
