@@ -59,14 +59,6 @@ pub fn init_allocator(allocator: &mut Allocator, size: usize, raw_bytes: *mut u8
     allocator.free_list = Some(raw_bytes as *mut Region);
 }
 
-/*
-impl Default for Allocator {
-    fn default() -> Self {
-        Allocator{ heap_start: 0 as *mut u8, heap_size: 0, free_list: None}
-    }
-}
-*/
-
 impl Allocator {
 
     pub fn free(&mut self, bytes: *mut u8) {
