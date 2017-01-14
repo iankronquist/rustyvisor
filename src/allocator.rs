@@ -28,10 +28,10 @@ pub struct Allocator {
     free_list: Option<*mut Region>,
 }
 
-static mut ALLOCATOR: Mutex<Allocator> = Mutex::new(Allocator{
+static mut ALLOCATOR: Mutex<Allocator> = Mutex::new(Allocator {
     heap_start: 0 as *mut u8,
     heap_size: 0,
-    free_list: None
+    free_list: None,
 });
 
 pub fn init_global_allocator(size: u64, raw_bytes: *mut u8) {
@@ -49,7 +49,7 @@ pub fn init_allocator(allocator: &mut Allocator, size: usize, raw_bytes: *mut u8
     assert!(!raw_bytes.is_null());
 
     let mut region = raw_bytes as *mut Region;
-    unsafe{
+    unsafe {
         (*region).size = size;
         (*region).next = None;
         (*region).prev = None;
@@ -60,7 +60,6 @@ pub fn init_allocator(allocator: &mut Allocator, size: usize, raw_bytes: *mut u8
 }
 
 impl Allocator {
-
     pub fn free(&mut self, bytes: *mut u8) {
 
         let mut region: *mut Region;
@@ -98,20 +97,22 @@ impl Allocator {
                     let new_prev: Option<*mut Region>;
                     let split = (*region).size - real_size;
                     if split > (region_offset as usize) + SPLIT_FUDGE_FACTOR {
-                         let split_region =
-                             (region as *mut u8).offset((size as isize) + region_offset) as *mut Region;
-                         new_next = Some(split_region);
-                         new_prev = Some(split_region);
+                        let split_region =
+                            (region as *mut u8)
+                                .offset((size as isize) +
+                                        region_offset) as *mut Region;
+                        new_next = Some(split_region);
+                        new_prev = Some(split_region);
                     } else {
                         new_next = (*region).next;
                         new_prev = (*region).prev;
                     }
                     match (*region).prev {
-                        None => {},
+                        None => {}
                         Some(prev) => (*prev).next = new_next,
                     }
                     match (*region).next {
-                        None => {},
+                        None => {}
                         Some(next) => (*next).prev = new_prev,
                     }
                     if new_next == None && new_prev == None {
@@ -128,22 +129,23 @@ impl Allocator {
 }
 
 #[no_mangle]
-pub extern fn __rust_allocate(size: usize, _align: usize) -> *mut u8 {
-    unsafe {
-        ALLOCATOR.lock().alloc(size)
-    }
+pub extern "C" fn __rust_allocate(size: usize, _align: usize) -> *mut u8 {
+    unsafe { ALLOCATOR.lock().alloc(size) }
 }
 
 #[no_mangle]
-pub extern fn __rust_deallocate(ptr: *mut u8, _old_size: usize, _align: usize) {
+pub extern "C" fn __rust_deallocate(ptr: *mut u8, _old_size: usize, _align: usize) {
     unsafe {
         ALLOCATOR.lock().free(ptr);
     }
 }
 
 #[no_mangle]
-pub extern fn __rust_reallocate(ptr: *mut u8, old_size: usize, new_size: usize,
-                                align: usize) -> *mut u8 {
+pub extern "C" fn __rust_reallocate(ptr: *mut u8,
+                                    old_size: usize,
+                                    new_size: usize,
+                                    align: usize)
+                                    -> *mut u8 {
     let new_ptr = __rust_allocate(new_size, align);
     unsafe { ptr::copy(ptr, new_ptr, cmp::min(old_size, new_size)) };
     __rust_deallocate(ptr, old_size, align);
@@ -151,14 +153,17 @@ pub extern fn __rust_reallocate(ptr: *mut u8, old_size: usize, new_size: usize,
 }
 
 #[no_mangle]
-pub extern fn __rust_reallocate_inplace(_ptr: *mut u8, old_size: usize,
-                                        _size: usize, _align: usize) -> usize {
-        old_size
+pub extern "C" fn __rust_reallocate_inplace(_ptr: *mut u8,
+                                            old_size: usize,
+                                            _size: usize,
+                                            _align: usize)
+                                            -> usize {
+    old_size
 }
 
 #[no_mangle]
-pub extern fn __rust_usable_size(size: usize, _align: usize) -> usize {
-        size
+pub extern "C" fn __rust_usable_size(size: usize, _align: usize) -> usize {
+    size
 }
 
 
@@ -171,7 +176,7 @@ mod tests {
     #[test]
     fn test_init_allocator() {
 
-        let mut al = Allocator{
+        let mut al = Allocator {
             heap_size: 0,
             heap_start: 0 as *mut u8,
             free_list: None,
@@ -179,7 +184,7 @@ mod tests {
 
         let mut memory: [u8; 100] = [0; 100];
         let pmemory: *mut u8 = memory.as_mut_ptr();
-        //init_allocator(&mut al, mem::size_of::<[u8; 100]>(), pmemory);
+        // init_allocator(&mut al, mem::size_of::<[u8; 100]>(), pmemory);
         init_allocator(&mut al, 100, pmemory);
         assert_eq!(al.heap_size, 100);
         assert_eq!(al.heap_start, pmemory);
@@ -199,7 +204,7 @@ mod tests {
     #[test]
     fn test_alloc_and_free() {
 
-        let mut al = Allocator{
+        let mut al = Allocator {
             heap_size: 0,
             heap_start: 0 as *mut u8,
             free_list: None,
