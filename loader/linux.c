@@ -13,7 +13,7 @@
 #define MB (0x1000 * 0x1000)
 #define HEAP_SIZE (1 * 0x1000)
 
-extern u32 entry(char *heap, char *vmx_region, u64 phys_vmx_region);
+extern u32 entry(char *heap, u64 heap_size, char *vmx_region, u64 phys_vmx_region);
 
 char *vmx_region = NULL;
 char *heap = NULL;
@@ -38,7 +38,7 @@ static int __init hype_init(void) {
 
 	phys_vmx_region = virt_to_phys(vmx_region);
 
-	err = entry(heap, vmx_region, phys_vmx_region);
+	err = entry(heap, HEAP_SIZE, vmx_region, phys_vmx_region);
 	if (err != 0)
 		return -1;
 

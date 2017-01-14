@@ -203,11 +203,7 @@ pub fn vmxon(addr: u64) -> Result<(), u32> {
              :
             );
     }
-    if ret == 0 {
-        Ok(())
-    } else {
-        Err(ret)
-    }
+    if ret == 0 { Ok(()) } else { Err(ret) }
 }
 
 pub fn vmxoff() {
@@ -235,11 +231,7 @@ pub fn vmread(field: VMCSField) -> Result<u64, u32> {
              :
             );
     }
-    if ret == 0 {
-        Ok(val)
-    } else {
-        Err(ret)
-    }
+    if ret == 0 { Ok(val) } else { Err(ret) }
 }
 
 pub fn vmwrite(field: VMCSField, val: u64) -> Result<(), u32> {
@@ -255,11 +247,7 @@ pub fn vmwrite(field: VMCSField, val: u64) -> Result<(), u32> {
              :
             );
     }
-    if ret == 0 {
-        Ok(())
-    } else {
-        Err(ret)
-    }
+    if ret == 0 { Ok(()) } else { Err(ret) }
 }
 
 pub fn rdmsr(msr: MSR) -> (u32, u32) {
@@ -301,11 +289,7 @@ pub fn vmptrld(vmcs_phys: u64) -> Result<(), u32> {
              :
             );
     }
-    if ret == 0 {
-        Ok(())
-    } else {
-        Err(ret)
-    }
+    if ret == 0 { Ok(()) } else { Err(ret) }
 }
 
 pub fn vmclear(vmcs_phys: u64) -> Result<(), u32> {
@@ -321,11 +305,7 @@ pub fn vmclear(vmcs_phys: u64) -> Result<(), u32> {
              :
             );
     }
-    if ret == 0 {
-        Ok(())
-    } else {
-        Err(ret)
-    }
+    if ret == 0 { Ok(()) } else { Err(ret) }
 }
 
 pub fn invvpid(vmcs_phys: u64) {
@@ -353,11 +333,7 @@ pub fn vmptrst() -> Result<u64, u32> {
              :
             );
     }
-    if ret == 0 {
-        Ok(vmcs_phys)
-    } else {
-        Err(ret)
-    }
+    if ret == 0 { Ok(vmcs_phys) } else { Err(ret) }
 }
 
 pub fn lidt(idt_desc: *const CPUTableDescriptor) {

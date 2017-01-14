@@ -8,10 +8,10 @@ implementing hypervisors.
 
 # Building
 
-Depends on nightly Rust, GCC, and the Linux module development headers.
+Depends on nightly Rust, Xargo, GCC, and the Linux module development headers.
 
 ```
-$ ./prep.sh
+$ ./scripts/remove-kvm.sh
 $ make
 $ sudo insmod rustyvisor.ko
 $ sudo rmmod rustyvisor.ko

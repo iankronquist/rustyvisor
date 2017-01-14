@@ -1,13 +1,16 @@
-#![feature(lang_items)]
+#![feature(allocator)]
 #![feature(asm)]
+#![feature(const_fn)]
+#![feature(lang_items)]
 #![no_std]
 
+pub mod runtime;
+pub mod allocator;
 
-mod runtime;
 pub mod vmx;
 
 
-pub type CChar = i8;
+pub type CChar = u8;
 
 macro_rules! cstring {
     ($e:expr) => (concat!($e, "\0").as_ptr() as *const CChar)
@@ -18,10 +21,12 @@ extern "C" {
 }
 
 
+
 #[no_mangle]
-pub extern "C" fn entry(_: *mut CChar, _: *mut CChar, _: u64) -> u32 {
+pub extern "C" fn entry(heap: *mut CChar, heap_size: u64, _: *mut CChar, _: u64) -> u32 {
     unsafe {
         printk(cstring!("Hello Linux!\n"));
     }
+    allocator::init_global_allocator(heap_size, heap);
     return 0;
 }
