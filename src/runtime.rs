@@ -24,6 +24,7 @@ pub extern "C" fn __floatundidf() {}
 pub extern "C" fn _Unwind_Resume() {}
 
 
+#[allow(empty_loop)]
 #[lang = "panic_fmt"]
 #[no_mangle]
 pub extern "C" fn panic_fmt() -> ! {

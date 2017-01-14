@@ -4,6 +4,7 @@
 // don't take this as an example for anything ever.
 
 #![allocator]
+#![allow(not_unsafe_ptr_arg_deref)]
 
 use core::ptr;
 use core::mem;
