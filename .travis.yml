@@ -7,7 +7,6 @@ rust:
 install:
   - curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain=$TRAVIS_RUST_VERSION -y
   - source ~/.cargo/env
-  - ls ~/rust/bin
   - rustup component add rust-src
   - sudo apt-get install linux-headers-$(uname -r)
   - cargo install xargo
