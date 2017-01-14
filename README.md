@@ -8,7 +8,7 @@ implementing hypervisors.
 
 # Building
 
-Depends on nightly Rust, GCC, and the Linux module development headers.
+Depends on nightly Rust, Xargo, GCC, and the Linux module development headers.
 
 ```
 $ ./prep.sh
