@@ -6,6 +6,7 @@ rust:
 
 install:
   - export PATH=$PATH:$HOME/.cargo/bin
+  - rustup component add rust-src
   - sudo apt-get install linux-headers-$(uname -r)
   - cargo install xargo
 
