@@ -5,7 +5,9 @@ rust:
   - nightly
 
 install:
-  - export PATH=$PATH:$HOME/.cargo/bin
+  - curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain=$TRAVIS_RUST_VERSION -y
+  - source ~/.cargo/env
+  - ls ~/rust
   - rustup component add rust-src
   - sudo apt-get install linux-headers-$(uname -r)
   - cargo install xargo
