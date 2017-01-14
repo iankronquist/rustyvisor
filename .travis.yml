@@ -6,6 +6,7 @@ rust:
 
 install:
   - sudo apt-get install linux-headers-$(uname -r)
+  - cargo install xargo
 
 script:
   - make
