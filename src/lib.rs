@@ -28,5 +28,5 @@ pub extern "C" fn entry(heap: *mut CChar, heap_size: u64, _: *mut CChar, _: u64)
         printk(cstring!("Hello Linux!\n"));
     }
     allocator::init_global_allocator(heap_size, heap);
-    return 0;
+    0
 }

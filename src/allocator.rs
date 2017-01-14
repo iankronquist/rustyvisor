@@ -4,8 +4,8 @@
 // don't take this as an example for anything ever.
 
 #![allocator]
+#![allow(not_unsafe_ptr_arg_deref)]
 
-use core::cmp;
 use core::ptr;
 use core::mem;
 
@@ -128,11 +128,13 @@ impl Allocator {
     }
 }
 
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn __rust_allocate(size: usize, _align: usize) -> *mut u8 {
     unsafe { ALLOCATOR.lock().alloc(size) }
 }
 
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn __rust_deallocate(ptr: *mut u8, _old_size: usize, _align: usize) {
     unsafe {
@@ -140,18 +142,21 @@ pub extern "C" fn __rust_deallocate(ptr: *mut u8, _old_size: usize, _align: usiz
     }
 }
 
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn __rust_reallocate(ptr: *mut u8,
                                     old_size: usize,
                                     new_size: usize,
                                     align: usize)
                                     -> *mut u8 {
+    use core::cmp;
     let new_ptr = __rust_allocate(new_size, align);
     unsafe { ptr::copy(ptr, new_ptr, cmp::min(old_size, new_size)) };
     __rust_deallocate(ptr, old_size, align);
     new_ptr
 }
 
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn __rust_reallocate_inplace(_ptr: *mut u8,
                                             old_size: usize,
@@ -161,6 +166,7 @@ pub extern "C" fn __rust_reallocate_inplace(_ptr: *mut u8,
     old_size
 }
 
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn __rust_usable_size(size: usize, _align: usize) -> usize {
     size
@@ -169,6 +175,8 @@ pub extern "C" fn __rust_usable_size(size: usize, _align: usize) -> usize {
 
 #[cfg(test)]
 mod tests {
+    use core::mem;
+
     use super::Allocator;
     use super::Region;
     use super::init_allocator;
@@ -184,8 +192,7 @@ mod tests {
 
         let mut memory: [u8; 100] = [0; 100];
         let pmemory: *mut u8 = memory.as_mut_ptr();
-        // init_allocator(&mut al, mem::size_of::<[u8; 100]>(), pmemory);
-        init_allocator(&mut al, 100, pmemory);
+        init_allocator(&mut al, mem::size_of::<[u8; 100]>(), pmemory);
         assert_eq!(al.heap_size, 100);
         assert_eq!(al.heap_start, pmemory);
 
