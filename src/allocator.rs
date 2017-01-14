@@ -9,6 +9,10 @@ use core::cmp;
 use core::ptr;
 use core::mem;
 
+use self::spin::Mutex;
+
+extern crate spin;
+
 const SPLIT_FUDGE_FACTOR: usize = 32;
 
 #[repr(C)]
@@ -24,18 +28,18 @@ pub struct Allocator {
     free_list: Option<*mut Region>,
 }
 
-static mut ALLOCATOR: Allocator = Allocator{
+static mut ALLOCATOR: Mutex<Allocator> = Mutex::new(Allocator{
     heap_start: 0 as *mut u8,
     heap_size: 0,
     free_list: None
-};
+});
 
 pub fn init_global_allocator(size: u64, raw_bytes: *mut u8) {
     static mut CALLED: bool = false;
 
     unsafe {
         assert!(!CALLED);
-        init_allocator(&mut ALLOCATOR, size as usize, raw_bytes);
+        init_allocator(&mut ALLOCATOR.lock(), size as usize, raw_bytes);
         CALLED = true;
     }
 }
@@ -134,14 +138,14 @@ impl Allocator {
 #[no_mangle]
 pub extern fn __rust_allocate(size: usize, _align: usize) -> *mut u8 {
     unsafe {
-        ALLOCATOR.alloc(size)
+        ALLOCATOR.lock().alloc(size)
     }
 }
 
 #[no_mangle]
 pub extern fn __rust_deallocate(ptr: *mut u8, _old_size: usize, _align: usize) {
     unsafe {
-        ALLOCATOR.free(ptr);
+        ALLOCATOR.lock().free(ptr);
     }
 }
 

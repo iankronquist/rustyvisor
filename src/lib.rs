@@ -1,5 +1,6 @@
 #![feature(allocator)]
 #![feature(asm)]
+#![feature(const_fn)]
 #![feature(lang_items)]
 #![no_std]
 
