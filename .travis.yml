@@ -9,7 +9,9 @@ install:
   - source ~/.cargo/env
   - rustup component add rust-src
   - sudo apt-get install linux-headers-$(uname -r)
-  - cargo install xargo rustfmt clippy
+  - cargo install xargo
+  - cargo install rustfmt
+  - cargo install clippy
 
 script:
   - make
