@@ -20,8 +20,6 @@ script:
   - make
   - make test
   - cargo clippy -- -D clippy
-  - cargo fmt -- --write-mode overwrite
-  - git diff-index --quiet HEAD
-  - git diff-index HEAD
+  - cargo fmt -- --write-mode diff
   - sudo insmod rustyvisor.ko
   - sudo rmmod rustyvisor.ko
