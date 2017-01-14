@@ -191,8 +191,7 @@ mod tests {
 
         let mut memory: [u8; 100] = [0; 100];
         let pmemory: *mut u8 = memory.as_mut_ptr();
-        // init_allocator(&mut al, mem::size_of::<[u8; 100]>(), pmemory);
-        init_allocator(&mut al, 100, pmemory);
+        init_allocator(&mut al, mem::size_of::<[u8; 100]>(), pmemory);
         assert_eq!(al.heap_size, 100);
         assert_eq!(al.heap_start, pmemory);
 
