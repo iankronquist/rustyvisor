@@ -1,0 +1,14 @@
+language: rust
+os: linux
+sudo: required
+rust:
+  - nightly
+
+install:
+  - sudo apt-get install linux-headers
+
+script:
+  - make
+  - make test
+  - sudo insmod rustyvisor.ko
+  - sudo rmmod rustyvisor.ko
