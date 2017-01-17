@@ -1,11 +1,16 @@
-#![feature(allocator)]
+#![feature(collections)]
 #![feature(asm)]
 #![feature(const_fn)]
 #![feature(lang_items)]
 #![no_std]
 
+#![allow(unknown_lints)]
+
+extern crate allocator;
+extern crate collections;
+
+pub mod dispatch_table;
 pub mod runtime;
-pub mod allocator;
 
 pub mod vmx;
 
