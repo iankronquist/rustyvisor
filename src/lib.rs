@@ -16,6 +16,7 @@ extern crate collections;
 
 pub mod dispatch_table;
 pub mod runtime;
+pub mod hash_map;
 
 pub mod vmx;
 
