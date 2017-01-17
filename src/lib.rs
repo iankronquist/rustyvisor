@@ -2,11 +2,16 @@
 #![feature(asm)]
 #![feature(const_fn)]
 #![feature(lang_items)]
+
+#![feature(alloc, collections)]
+#![allow(unknown_lints)]
 #![no_std]
 
-#![allow(unknown_lints)]
-
+extern crate alloc;
+#[cfg(not(test))]
 extern crate allocator;
+extern crate spin;
+#[macro_use]
 extern crate collections;
 
 pub mod dispatch_table;
@@ -28,10 +33,12 @@ extern "C" {
 
 
 #[no_mangle]
-pub extern "C" fn entry(heap: *mut CChar, heap_size: u64, _: *mut CChar, _: u64) -> u32 {
+pub extern "C" fn entry(_heap: *mut CChar, _heap_size: u64, _: *mut CChar, _: u64) -> u32 {
     unsafe {
         printk(cstring!("Hello Linux!\n"));
     }
-    allocator::init_global_allocator(heap_size, heap);
+
+    #[cfg(not(test))]
+    allocator::init_global_allocator(_heap_size, _heap);
     0
 }
