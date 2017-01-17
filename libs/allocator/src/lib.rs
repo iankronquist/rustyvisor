@@ -8,6 +8,7 @@
 
 #![allocator]
 #![allow(not_unsafe_ptr_arg_deref)]
+#![allow(unknown_lints)]
 #![no_std]
 
 use core::ptr;
