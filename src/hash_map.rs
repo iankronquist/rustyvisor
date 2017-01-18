@@ -38,7 +38,6 @@ impl<K: Hash + cmp::PartialEq, V> Bucket<K, V> {
 
 
 impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
-
     pub fn new(size: usize) -> Self {
         let mut table = vec![];
         for _ in 0..size {
