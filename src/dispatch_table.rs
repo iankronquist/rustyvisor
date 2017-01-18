@@ -2,7 +2,7 @@ use hash_map::HashMap;
 use core::hash;
 use core::cmp;
 
-pub type DispatchFn<T> = fn (&T) -> bool;
+pub type DispatchFn<T> = fn(&T) -> bool;
 
 
 pub struct DispatchTable<T: cmp::Eq + hash::Hash> {
@@ -10,9 +10,8 @@ pub struct DispatchTable<T: cmp::Eq + hash::Hash> {
 }
 
 impl<T: cmp::Eq + hash::Hash> DispatchTable<T> {
-
-    pub fn new() -> Self{
-        DispatchTable{ table: HashMap::new(16) }
+    pub fn new() -> Self {
+        DispatchTable { table: HashMap::new(16) }
     }
 
     pub fn dispatch(&mut self, event: &T) -> bool {
@@ -29,7 +28,6 @@ impl<T: cmp::Eq + hash::Hash> DispatchTable<T> {
     pub fn unregister(&mut self, event: T) {
         self.table.remove(event);
     }
-
 }
 
 #[cfg(test)]

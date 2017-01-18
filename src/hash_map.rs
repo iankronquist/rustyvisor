@@ -10,7 +10,7 @@ use core::cmp;
 enum HashMapMember<K: Hash + cmp::PartialEq, V> {
     None,
     Tombstone,
-    Bucket(Bucket<K, V>)
+    Bucket(Bucket<K, V>),
 }
 
 struct Bucket<K: Hash + cmp::PartialEq, V> {
@@ -20,23 +20,28 @@ struct Bucket<K: Hash + cmp::PartialEq, V> {
 
 pub struct HashMap<K: Hash + cmp::PartialEq, V> {
     count: usize,
-    table: RwLock<Vec<HashMapMember<K, V>>>
+    table: RwLock<Vec<HashMapMember<K, V>>>,
 }
 
 impl<K: Hash + cmp::PartialEq, V> Bucket<K, V> {
     fn new(key: K, value: V) -> Self {
-        Bucket{ key: key, value: Rc::new(value) }
+        Bucket {
+            key: key,
+            value: Rc::new(value),
+        }
     }
 }
 
 impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
-
     pub fn new(size: usize) -> Self {
         let mut table = vec![];
         for _ in 0..size {
             table.push(HashMapMember::None);
         }
-        HashMap{ count: 0, table: RwLock::new(table) }
+        HashMap {
+            count: 0,
+            table: RwLock::new(table),
+        }
     }
 
 
@@ -71,9 +76,9 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
         let mut table = self.table.write();
         let (begin, end) = table.split_at_mut(index);
         for entry in end.iter_mut().chain(begin) {
-             match entry {
+            match entry {
                 &mut HashMapMember::Tombstone => continue,
-                loc @ &mut HashMapMember::None =>  {
+                loc @ &mut HashMapMember::None => {
                     *loc = HashMapMember::Bucket(Bucket::new(key, value));
                     return;
                 }
@@ -107,7 +112,7 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
                 }
             }
         }
-       false
+        false
     }
 
 
