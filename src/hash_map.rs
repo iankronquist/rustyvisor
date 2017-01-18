@@ -50,33 +50,16 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
 
     pub fn remove(&mut self, key: K) {
         let index = self.get_index(&key);
-
-        for i in index..self.table.write().len() {
-            match self.table.write()[i] {
-                HashMapMember::Tombstone => continue,
-                HashMapMember::None => return,
-                HashMapMember::Bucket(ref mut b) => {
-                    if b.key == key {
-                        self.table.write()[i] = HashMapMember::Tombstone;
-                        return;
-                    } else {
-                        continue;
-                    }
-                }
-            }
-        }
-
-        for i in 0..index {
-            match self.table.write()[i] {
-                HashMapMember::Tombstone => continue,
-                HashMapMember::None => return,
-                HashMapMember::Bucket(ref mut b) => {
-                    if b.key == key {
-                        self.table.write()[i] = HashMapMember::Tombstone;
-                        return;
-                    } else {
-                        continue;
-                    }
+        let mut table = self.table.write();
+        let (begin, end) = table.split_at_mut(index);
+        for entry in end.iter_mut().chain(begin) {
+            match entry {
+                &mut HashMapMember::Tombstone => continue,
+                &mut HashMapMember::None => return,
+                &mut HashMapMember::Bucket(ref mut b) if b.key != key => continue,
+                loc @ &mut HashMapMember::Bucket(_) => {
+                    *loc = HashMapMember::Tombstone;
+                    return;
                 }
             }
         }
@@ -85,35 +68,16 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
 
     pub fn insert(&mut self, key: K, value: V) {
         let index = self.get_index(&key);
-        extern crate std;
-
-        for i in index..self.table.write().len() {
-            match self.table.write()[i] {
-                HashMapMember::Tombstone => continue,
-                HashMapMember::None => {
-                    self.table.write()[i] = HashMapMember::Bucket(Bucket::new(key, value));
+        let mut table = self.table.write();
+        let (begin, end) = table.split_at_mut(index);
+        for entry in end.iter_mut().chain(begin) {
+             match entry {
+                &mut HashMapMember::Tombstone => continue,
+                loc @ &mut HashMapMember::None =>  {
+                    *loc = HashMapMember::Bucket(Bucket::new(key, value));
                     return;
                 }
-                HashMapMember::Bucket(ref mut b) => {
-                    if b.key == key {
-                        b.value = Rc::new(value);
-                        self.count += 1;
-                        return;
-                    } else {
-                        continue;
-                    }
-                }
-            }
-        }
-
-        for i in 0..index {
-            match self.table.write()[i] {
-                HashMapMember::Tombstone => continue,
-                HashMapMember::None => {
-                    self.table.write()[i] = HashMapMember::Bucket(Bucket::new(key, value));
-                    return;
-                }
-                HashMapMember::Bucket(ref mut b) => {
+                &mut HashMapMember::Bucket(ref mut b) => {
                     if b.key == key {
                         b.value = Rc::new(value);
                         self.count += 1;
@@ -127,13 +91,14 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
     }
 
     pub fn contains(&self, key: &K) -> bool {
-        let index = self.get_index(key);
-
-        for i in index..self.table.read().len() {
-            match self.table.read()[i] {
-                HashMapMember::Tombstone => continue,
-                HashMapMember::None => return false,
-                HashMapMember::Bucket(ref b) => {
+        let index = self.get_index(&key);
+        let table = self.table.read();
+        let (begin, end) = table.split_at(index);
+        for entry in end.iter().chain(begin) {
+            match entry {
+                &HashMapMember::Tombstone => continue,
+                &HashMapMember::None => return false,
+                &HashMapMember::Bucket(ref b) => {
                     if &b.key == key {
                         return true;
                     } else {
@@ -142,46 +107,19 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
                 }
             }
         }
-
-        for i in index..self.table.read().len() {
-            match self.table.read()[i] {
-                HashMapMember::Tombstone => continue,
-                HashMapMember::None => return false,
-                HashMapMember::Bucket(ref b) => {
-                    if &b.key == key {
-                        return true;
-                    } else {
-                        continue;
-                    }
-                }
-            }
-        }
-        false
+       false
     }
 
 
     pub fn get(&self, key: &K) -> Option<Rc<V>> {
-        let index = self.get_index(key);
-
-        for i in index..self.table.read().len() {
-            match self.table.read()[i] {
-                HashMapMember::Tombstone => continue,
-                HashMapMember::None => return None,
-                HashMapMember::Bucket(ref b) => {
-                    if &b.key == key {
-                        return Some(b.value.clone());
-                    } else {
-                        continue;
-                    }
-                }
-            }
-        }
-
-        for i in index..self.table.read().len() {
-            match self.table.read()[i] {
-                HashMapMember::Tombstone => continue,
-                HashMapMember::None => return None,
-                HashMapMember::Bucket(ref b) => {
+        let index = self.get_index(&key);
+        let mut table = self.table.write();
+        let (begin, end) = table.split_at_mut(index);
+        for entry in end.iter_mut().chain(begin) {
+            match entry {
+                &mut HashMapMember::Tombstone => continue,
+                &mut HashMapMember::None => return None,
+                &mut HashMapMember::Bucket(ref b) => {
                     if &b.key == key {
                         return Some(b.value.clone());
                     } else {
@@ -223,9 +161,8 @@ mod tests {
     #[test]
     fn test_basic_operations() {
         let mut ht = HashMap::<i32, i32>::new(10);
-        ht.insert(42, 43);
-        /*
         let k = 42;
+        ht.insert(k, 43);
         assert!(ht.contains(&k));
         assert_eq!(ht.get(&k), Some(Rc::new(43)));
 
@@ -240,6 +177,5 @@ mod tests {
         ht.insert(42, 45);
         assert!(ht.contains(&k));
         assert_eq!(ht.get(&k), Some(Rc::new(45)));
-        */
     }
 }
