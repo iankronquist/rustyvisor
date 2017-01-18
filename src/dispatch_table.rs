@@ -34,6 +34,7 @@ impl<T: cmp::Eq + hash::Hash> DispatchTable<T> {
 
 #[cfg(test)]
 mod test {
+    use super::DispatchTable;
 
     #[derive(Hash, Eq, PartialEq, Debug)]
     enum Event {
@@ -42,15 +43,25 @@ mod test {
     }
 
     fn on_vmexit(_: &Event) -> bool {
-        print!("Guest exited!");
         true
     }
 
     #[test]
-    fn test_dispatch_table() {
+    fn test_dispatch_table_register() {
         let mut dt = DispatchTable::<Event>::new();
         dt.register(Event::VMExit, on_vmexit);
         assert!(dt.dispatch(&Event::VMExit));
         assert!(!dt.dispatch(&Event::PageFault));
     }
+
+    #[test]
+    fn test_dispatch_table_unregister() {
+        let mut dt = DispatchTable::<Event>::new();
+        dt.register(Event::VMExit, on_vmexit);
+        assert!(dt.dispatch(&Event::VMExit));
+        assert!(!dt.dispatch(&Event::PageFault));
+        dt.unregister(Event::VMExit);
+        assert!(!dt.dispatch(&Event::VMExit));
+    }
+
 }
