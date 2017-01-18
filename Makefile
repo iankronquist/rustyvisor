@@ -18,8 +18,8 @@ target/$(TARGET)/$(RELEASE)/lib$(MODULENAME).a: $(RUST_FILES) Cargo.toml
 	RUSTFLAGS='-C relocation-model=static' $(XARGO) build --target=$(TARGET) --verbose
 
 test:
-	cd libs/allocator && $(CARGO) test
-	$(CARGO) test
+	cd libs/allocator && $(CARGO) test --verbose
+	$(CARGO) test --verbose
 
 
 clean:
