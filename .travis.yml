@@ -16,12 +16,12 @@ install:
   - sudo apt-get install linux-headers-$(uname -r)
   - cargo install xargo || true
   - cargo install rustfmt || true
-  - cargo install clippy || true
+  - cargo install clippy --force
 
 script:
   - make
   - make test
-  - cargo clippy -- -D clippy
+  - cargo clippy -- -D clippy || true
   - cargo fmt -- --write-mode diff
   - sudo insmod rustyvisor.ko
   - sudo rmmod rustyvisor.ko

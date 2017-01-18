@@ -1,1 +1,2 @@
-[target.x86_64-linux]
+[target.x86_64-linux.dependencies]
+collections = {}

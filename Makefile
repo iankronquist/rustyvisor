@@ -7,17 +7,20 @@ KDIR := /lib/modules/$(shell uname -r)/build
 PWD := $(shell pwd)
 CARGO := cargo
 XARGO := xargo
+RUST_FILES := libs/*/src/*.rs src/*.rs
 
 all: $(MODULENAME).ko
 
 $(MODULENAME).ko: loader/linux.c target/$(TARGET)/$(RELEASE)/lib$(MODULENAME).a
 	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules
 
-target/$(TARGET)/$(RELEASE)/lib$(MODULENAME).a: src/*.rs Cargo.toml
-	RUSTFLAGS='-C relocation-model=static' $(XARGO) build --target=$(TARGET)
+target/$(TARGET)/$(RELEASE)/lib$(MODULENAME).a: $(RUST_FILES) Cargo.toml
+	RUSTFLAGS='-C relocation-model=static' $(XARGO) build --target=$(TARGET) --verbose
 
 test:
-	$(CARGO) test
+	cd libs/allocator && $(CARGO) test --verbose
+	$(CARGO) test --verbose
+
 
 clean:
 	rm -f *.o *.ko *.ko.unsigned modules.order Module.symvers *.mod.c .*.cmd

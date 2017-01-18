@@ -3,8 +3,13 @@
 // to revisit this someday when I know the language better, but in the meantime
 // don't take this as an example for anything ever.
 
+#![feature(allocator)]
+#![feature(const_fn)]
+
 #![allocator]
 #![allow(not_unsafe_ptr_arg_deref)]
+#![allow(unknown_lints)]
+#![no_std]
 
 use core::ptr;
 use core::mem;
