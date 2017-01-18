@@ -7,21 +7,25 @@ use core::hash::SipHasher;
 use collections::vec::Vec;
 use core::cmp;
 
+
 enum HashMapMember<K: Hash + cmp::PartialEq, V> {
     None,
     Tombstone,
     Bucket(Bucket<K, V>),
 }
 
+
 struct Bucket<K: Hash + cmp::PartialEq, V> {
     key: K,
     value: Rc<V>,
 }
 
+
 pub struct HashMap<K: Hash + cmp::PartialEq, V> {
     count: usize,
     table: RwLock<Vec<HashMapMember<K, V>>>,
 }
+
 
 impl<K: Hash + cmp::PartialEq, V> Bucket<K, V> {
     fn new(key: K, value: V) -> Self {
@@ -32,7 +36,9 @@ impl<K: Hash + cmp::PartialEq, V> Bucket<K, V> {
     }
 }
 
+
 impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
+
     pub fn new(size: usize) -> Self {
         let mut table = vec![];
         for _ in 0..size {
@@ -52,6 +58,7 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
         key.hash(&mut hasher);
         (hasher.finish() as usize) % self.table.read().len()
     }
+
 
     pub fn remove(&mut self, key: K) {
         let index = self.get_index(&key);
@@ -95,15 +102,16 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
         }
     }
 
+
     pub fn contains(&self, key: &K) -> bool {
-        let index = self.get_index(&key);
+        let index = self.get_index(key);
         let table = self.table.read();
         let (begin, end) = table.split_at(index);
         for entry in end.iter().chain(begin) {
-            match entry {
-                &HashMapMember::Tombstone => continue,
-                &HashMapMember::None => return false,
-                &HashMapMember::Bucket(ref b) => {
+            match *entry {
+                HashMapMember::Tombstone => continue,
+                HashMapMember::None => return false,
+                HashMapMember::Bucket(ref b) => {
                     if &b.key == key {
                         return true;
                     } else {
@@ -117,14 +125,14 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
 
 
     pub fn get(&self, key: &K) -> Option<Rc<V>> {
-        let index = self.get_index(&key);
+        let index = self.get_index(key);
         let mut table = self.table.write();
         let (begin, end) = table.split_at_mut(index);
         for entry in end.iter_mut().chain(begin) {
-            match entry {
-                &mut HashMapMember::Tombstone => continue,
-                &mut HashMapMember::None => return None,
-                &mut HashMapMember::Bucket(ref b) => {
+            match *entry {
+                HashMapMember::Tombstone => continue,
+                HashMapMember::None => return None,
+                HashMapMember::Bucket(ref b) => {
                     if &b.key == key {
                         return Some(b.value.clone());
                     } else {
@@ -141,6 +149,7 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
 mod tests {
     use alloc::rc::Rc;
     use super::HashMap;
+
 
     #[test]
     fn test_new() {
@@ -162,6 +171,7 @@ mod tests {
         let length = ht2.table.read().len();
         assert_eq!(length, 1000);
     }
+
 
     #[test]
     fn test_basic_operations() {
