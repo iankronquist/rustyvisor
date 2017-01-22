@@ -17,6 +17,8 @@ extern crate collections;
 pub mod dispatch_table;
 pub mod runtime;
 pub mod hash_map;
+pub mod gdt;
+pub mod cli;
 
 pub mod vmx;
 
@@ -38,6 +40,8 @@ pub extern "C" fn entry(_heap: *mut CChar, _heap_size: u64, _: *mut CChar, _: u6
     unsafe {
         printk(cstring!("Hello Linux!\n"));
     }
+
+    gdt::test_load();
 
     #[cfg(not(test))]
     allocator::init_global_allocator(_heap_size, _heap);
