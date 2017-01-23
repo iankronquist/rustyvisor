@@ -6,35 +6,45 @@ struct GDTEntry {
     limit_low: u16,
     base_low: u16,
     base_middle: u8,
-    flags: u8,
-    more_flags: u8,
+    access: u8,
+    granularity: u8,
     base_high: u8,
+    base_highest: u32,
+    reserved0: u32,
 }
+
+
 
 const GDT: [GDTEntry; 3] = [
     GDTEntry{
         limit_low: 0,
         base_low: 0,
         base_middle: 0,
-        flags: 0,
-        more_flags: 0,
+        access: 0,
+        granularity: 0,
         base_high: 0,
+        base_highest: 0,
+        reserved0: 0,
     },
     GDTEntry{
         limit_low: 0xffff,
         base_low: 0,
         base_middle: 0,
-        flags: 0b10101001,
-        more_flags: 0b11110111,
+        access: 0b10101001,
+        granularity: 0b11110111,
         base_high: 0,
+        base_highest: 0,
+        reserved0: 0,
     },
     GDTEntry{
         limit_low: 0xffff,
         base_low: 0,
         base_middle: 0,
-        flags: 0b00101001,
-        more_flags: 0b11110111,
+        access: 0b00101001,
+        granularity: 0b11110111,
         base_high: 0,
+        base_highest: 0,
+        reserved0: 0,
     },
 ];
 
