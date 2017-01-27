@@ -1,6 +1,7 @@
 use vmx;
 
 #[repr(packed)]
+#[allow(dead_code)]
 struct GDTEntry {
     limit_low: u16,
     base_low: u16,
