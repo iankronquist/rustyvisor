@@ -3,7 +3,7 @@
 #![feature(const_fn)]
 #![feature(lang_items)]
 
-#![feature(alloc, collections)]
+#![feature(alloc)]
 #![allow(unknown_lints)]
 #![no_std]
 
@@ -14,32 +14,32 @@ extern crate spin;
 #[macro_use]
 extern crate collections;
 
-pub mod dispatch_table;
-pub mod runtime;
-pub mod hash_map;
+#[macro_use]
+pub mod linux;
 
+pub mod cli;
+pub mod dispatch_table;
+pub mod gdt;
+pub mod hash_map;
+pub mod runtime;
 pub mod vmx;
 
-
-pub type CChar = u8;
-
-macro_rules! cstring {
-    ($e:expr) => (concat!($e, "\0").as_ptr() as *const CChar)
-}
-
-extern "C" {
-    fn printk(format: *const CChar, ...);
-}
-
-
-
 #[no_mangle]
-pub extern "C" fn entry(_heap: *mut CChar, _heap_size: u64, _: *mut CChar, _: u64) -> u32 {
+pub extern "C" fn entry(_heap: *mut u8, _heap_size: u64, _: *mut u8, _: u64) -> u32 {
     unsafe {
-        printk(cstring!("Hello Linux!\n"));
+        linux::printk(cstring!("Hello Linux!\n"));
     }
+
+    #[cfg(feature = "runtime_tests")]
+    runtime_tests();
+
 
     #[cfg(not(test))]
     allocator::init_global_allocator(_heap_size, _heap);
     0
+}
+
+#[cfg(feature = "runtime_tests")]
+fn runtime_tests() {
+    gdt::runtime_tests::test_load();
 }

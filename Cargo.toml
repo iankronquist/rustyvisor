@@ -8,6 +8,8 @@ authors = ["Ian Kronquist <iankronquist@gmail.com>"]
 spin = {version = "0.4"}
 allocator = {path = "libs/allocator"}
 
+[features]
+runtime_tests = []
 
 [lib]
 crate_type = ["staticlib"]

@@ -1,6 +1,16 @@
+#[repr(packed)]
 pub struct CPUTableDescriptor {
     pub limit: u16,
     pub base: u64,
+}
+
+impl Default for CPUTableDescriptor {
+    fn default() -> Self {
+        CPUTableDescriptor {
+            limit: 0,
+            base: 0,
+        }
+    }
 }
 
 #[repr(u32)]
@@ -350,9 +360,9 @@ pub fn lidt(idt_desc: *const CPUTableDescriptor) {
 pub fn lgdt(gdt_desc: *const CPUTableDescriptor) {
     unsafe {
         asm!(
-            "lgdt $0"
+            "lgdt ($0)"
             :
-            : "m"(gdt_desc)
+            : "r"(gdt_desc)
             :
             );
     }
@@ -361,9 +371,9 @@ pub fn lgdt(gdt_desc: *const CPUTableDescriptor) {
 pub fn sgdt(gdt_desc: *mut CPUTableDescriptor) {
     unsafe {
         asm!(
-            "sgdt $0"
+            "sgdt ($0)"
             :
-            : "m"(gdt_desc)
+            : "r"(gdt_desc)
             :
             );
     }
@@ -606,4 +616,16 @@ pub fn read_db7() -> u64 {
             );
     }
     ret
+}
+
+pub fn cli() {
+    unsafe {
+        asm!("cli" : : :);
+    }
+}
+
+pub fn sti() {
+    unsafe {
+        asm!("sti" : : :);
+    }
 }
