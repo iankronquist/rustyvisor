@@ -30,9 +30,16 @@ pub extern "C" fn entry(_heap: *mut u8, _heap_size: u64, _: *mut u8, _: u64) -> 
         linux::printk(cstring!("Hello Linux!\n"));
     }
 
-    gdt::test_load();
+    #[cfg(feature = "runtime_tests")]
+    runtime_tests();
+
 
     #[cfg(not(test))]
     allocator::init_global_allocator(_heap_size, _heap);
     0
+}
+
+#[cfg(feature = "runtime_tests")]
+fn runtime_tests() {
+    gdt::runtime_tests::test_load();
 }
