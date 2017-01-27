@@ -5,8 +5,8 @@ use core::hash::{Hash, Hasher};
 #[allow(deprecated)]
 use core::hash::SipHasher;
 use collections::vec::Vec;
+use core::mem;
 use core::cmp;
-
 
 enum HashMapMember<K: Hash + cmp::PartialEq, V> {
     None,
@@ -24,14 +24,15 @@ struct Bucket<K: Hash + cmp::PartialEq, V> {
 pub struct HashMap<K: Hash + cmp::PartialEq, V> {
     count: usize,
     table: RwLock<Vec<HashMapMember<K, V>>>,
+    rebalance_factor: f32,
 }
 
 
 impl<K: Hash + cmp::PartialEq, V> Bucket<K, V> {
-    fn new(key: K, value: V) -> Self {
+    fn new(key: K, value: Rc<V>) -> Self {
         Bucket {
             key: key,
-            value: Rc::new(value),
+            value: value,
         }
     }
 }
@@ -46,7 +47,26 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
         HashMap {
             count: 0,
             table: RwLock::new(table),
+            rebalance_factor: 0.75,
         }
+    }
+
+
+    fn calculate_load(&self) -> f32 {
+        self.count as f32 / self.table.read().len() as f32
+    }
+
+
+    fn rebalance(&mut self) {
+        let mut table = self.table.write();
+        let mut temp = HashMap::new(table.len() * 2);
+        for entry in table.drain(1..) {
+            match entry {
+                HashMapMember::Bucket(b) => temp.insert_rc(b.key, b.value),
+                _ => continue,
+            }
+        }
+        mem::replace(&mut *table, temp.table.into_inner());
     }
 
 
@@ -77,7 +97,11 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
     }
 
 
-    pub fn insert(&mut self, key: K, value: V) {
+    pub fn insert_rc(&mut self, key: K, value: Rc<V>) {
+        self.count += 1;
+        if self.calculate_load() >= self.rebalance_factor {
+            self.rebalance();
+        }
         let index = self.get_index(&key);
         let mut table = self.table.write();
         let (begin, end) = table.split_at_mut(index);
@@ -90,8 +114,7 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
                 }
                 &mut HashMapMember::Bucket(ref mut b) => {
                     if b.key == key {
-                        b.value = Rc::new(value);
-                        self.count += 1;
+                        b.value = value;
                         return;
                     } else {
                         continue;
@@ -99,6 +122,11 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
                 }
             }
         }
+    }
+
+
+    pub fn insert(&mut self, key: K, value: V) {
+        self.insert_rc(key, Rc::new(value))
     }
 
 
@@ -191,5 +219,40 @@ mod tests {
         ht.insert(42, 45);
         assert!(ht.contains(&k));
         assert_eq!(ht.get(&k), Some(Rc::new(45)));
+    }
+
+    #[test]
+    fn test_rebalance() {
+
+        let initial_size = 4;
+        let mut ht = HashMap::<usize, usize>::new(initial_size);
+        assert_eq!(ht.count, 0);
+
+        ht.insert(0, 0);
+        assert_eq!(ht.count, 1);
+        assert_eq!(ht.table.read().len(), 4);
+
+        ht.insert(1, 1);
+        assert_eq!(ht.count, 2);
+        assert_eq!(ht.table.read().len(), 4);
+
+        ht.insert(2, 2);
+        assert_eq!(ht.count, 3);
+        assert_eq!(ht.table.read().len(), 8);
+
+        ht.insert(3, 3);
+        assert_eq!(ht.count, 4);
+        assert!(ht.calculate_load() < ht.rebalance_factor);
+        assert_eq!(ht.table.read().len(), 8);
+
+        ht.insert(4, 4);
+        assert_eq!(ht.count, 5);
+        assert!(ht.calculate_load() < ht.rebalance_factor);
+        assert_eq!(ht.table.read().len(), 8);
+
+        ht.insert(5, 5);
+        assert_eq!(ht.count, 6);
+        assert!(ht.calculate_load() < ht.rebalance_factor);
+        assert_eq!(ht.table.read().len(), 16);
     }
 }
