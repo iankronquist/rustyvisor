@@ -3,7 +3,7 @@
 #![feature(const_fn)]
 #![feature(lang_items)]
 
-#![feature(alloc, collections)]
+#![feature(alloc)]
 #![allow(unknown_lints)]
 #![no_std]
 
