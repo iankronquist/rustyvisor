@@ -15,41 +15,42 @@ struct GDTEntry {
 
 
 
-const GDT: [GDTEntry; 3] = [
-    GDTEntry{
-        limit_low: 0,
-        base_low: 0,
-        base_middle: 0,
-        access: 0,
-        granularity: 0,
-        base_high: 0,
-        base_highest: 0,
-        reserved0: 0,
-    },
-    GDTEntry{
-        limit_low: 0xffff,
-        base_low: 0,
-        base_middle: 0,
-        access: 0b10101001,
-        granularity: 0b11110111,
-        base_high: 0,
-        base_highest: 0,
-        reserved0: 0,
-    },
-    GDTEntry{
-        limit_low: 0xffff,
-        base_low: 0,
-        base_middle: 0,
-        access: 0b00101001,
-        granularity: 0b11110111,
-        base_high: 0,
-        base_highest: 0,
-        reserved0: 0,
-    },
-];
+const GDT: [GDTEntry; 3] = [GDTEntry {
+                                limit_low: 0,
+                                base_low: 0,
+                                base_middle: 0,
+                                access: 0,
+                                granularity: 0,
+                                base_high: 0,
+                                base_highest: 0,
+                                reserved0: 0,
+                            },
+                            GDTEntry {
+                                limit_low: 0xffff,
+                                base_low: 0,
+                                base_middle: 0,
+                                access: 0b10101001,
+                                granularity: 0b11110111,
+                                base_high: 0,
+                                base_highest: 0,
+                                reserved0: 0,
+                            },
+                            GDTEntry {
+                                limit_low: 0xffff,
+                                base_low: 0,
+                                base_middle: 0,
+                                access: 0b00101001,
+                                granularity: 0b11110111,
+                                base_high: 0,
+                                base_highest: 0,
+                                reserved0: 0,
+                            }];
 
 pub fn new_host_descriptor() -> vmx::CPUTableDescriptor {
-    vmx::CPUTableDescriptor{ limit: 0xffff, base: GDT.as_ptr() as u64 }
+    vmx::CPUTableDescriptor {
+        limit: 0xffff,
+        base: GDT.as_ptr() as u64,
+    }
 }
 
 #[cfg(feature = "runtime_tests")]

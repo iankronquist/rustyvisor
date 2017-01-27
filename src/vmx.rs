@@ -5,7 +5,12 @@ pub struct CPUTableDescriptor {
 }
 
 impl Default for CPUTableDescriptor {
-    fn default() -> Self { CPUTableDescriptor{ limit: 0, base: 0 } }
+    fn default() -> Self {
+        CPUTableDescriptor {
+            limit: 0,
+            base: 0,
+        }
+    }
 }
 
 #[repr(u32)]
