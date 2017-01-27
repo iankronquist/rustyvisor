@@ -1,5 +1,4 @@
 use vmx;
-use cli;
 
 #[repr(packed)]
 struct GDTEntry {
@@ -52,11 +51,20 @@ pub fn new_host_descriptor() -> vmx::CPUTableDescriptor {
     vmx::CPUTableDescriptor{ limit: 0xffff, base: GDT.as_ptr() as u64 }
 }
 
-pub fn test_load() {
-    cli::ClearLocalInterruptsGuard::new();
-    let gdt_desc = new_host_descriptor();
-    let mut orig_gdt_desc: vmx::CPUTableDescriptor = Default::default();
-    vmx::sgdt(&mut orig_gdt_desc);
-    vmx::lgdt(&gdt_desc);
-    vmx::lgdt(&orig_gdt_desc);
+#[cfg(feature = "runtime_tests")]
+pub mod runtime_tests {
+
+    use cli;
+    use vmx;
+    use super::new_host_descriptor;
+
+
+    pub fn test_load() {
+        cli::ClearLocalInterruptsGuard::new();
+        let gdt_desc = new_host_descriptor();
+        let mut orig_gdt_desc: vmx::CPUTableDescriptor = Default::default();
+        vmx::sgdt(&mut orig_gdt_desc);
+        vmx::lgdt(&gdt_desc);
+        vmx::lgdt(&orig_gdt_desc);
+    }
 }
