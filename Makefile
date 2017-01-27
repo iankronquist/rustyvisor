@@ -7,15 +7,17 @@ KDIR := /lib/modules/$(shell uname -r)/build
 PWD := $(shell pwd)
 CARGO := cargo
 XARGO := xargo
-RUST_FILES := libs/*/src/*.rs src/*.rs
+RUSTFILES := libs/*/src/*.rs src/*.rs
+RUSTFLAGS='-C relocation-model=static'
+CARFOFEATURES="runtime_tests"
 
 all: $(MODULENAME).ko
 
 $(MODULENAME).ko: loader/linux.c target/$(TARGET)/$(RELEASE)/lib$(MODULENAME).a
 	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules
 
-target/$(TARGET)/$(RELEASE)/lib$(MODULENAME).a: $(RUST_FILES) Cargo.toml
-	RUSTFLAGS='-C relocation-model=static' $(XARGO) build --target=$(TARGET) --verbose
+target/$(TARGET)/$(RELEASE)/lib$(MODULENAME).a: $(RUSTFILES) Cargo.toml
+	RUSTFLAGS=$(RUSTFLAGS) $(XARGO) build --target=$(TARGET) --verbose --features "$(CARFOFEATURES)"
 
 test:
 	cd libs/allocator && $(CARGO) test --verbose
