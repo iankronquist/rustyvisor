@@ -3,6 +3,8 @@ type InterruptHandlerFn = unsafe extern "C" fn() -> !;
 
 use dispatch_table::{DispatchTable, DispatchFn};
 use spin::RwLock;
+use vmx;
+use core::mem;
 
 #[derive(Default)]
 #[repr(packed)]
@@ -14,6 +16,14 @@ struct IDTEntry {
     base_high: u16,
     base_highest: u32,
     _reserved: u32,
+}
+
+fn new_host_idt_descriptor() -> vmx::CPUTableDescriptor {
+    let base = (*DESCRIPTOR_TABLE.write()).0.as_ptr() as u64;
+    vmx::CPUTableDescriptor{
+        base: base,
+        limit: (mem::size_of::<IDT>() - 1) as u16,
+    }
 }
 
 #[derive(Default)]
