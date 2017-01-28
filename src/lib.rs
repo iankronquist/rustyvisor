@@ -45,4 +45,5 @@ pub extern "C" fn entry(_heap: *mut u8, _heap_size: u64, _: *mut u8, _: u64) -> 
 #[cfg(feature = "runtime_tests")]
 fn runtime_tests() {
     gdt::runtime_tests::run();
+    interrupts::runtime_tests::run();
 }
