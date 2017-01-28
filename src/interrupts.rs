@@ -97,6 +97,7 @@ pub mod runtime_tests {
     use interrupts;
     use vmx;
     use cli;
+    use core::mem;
 
     fn new_host_idt_descriptor() -> vmx::CPUTableDescriptor {
         let base = (*interrupts::DESCRIPTOR_TABLE.write()).0.as_ptr() as u64;
