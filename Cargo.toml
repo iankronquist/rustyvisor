@@ -7,6 +7,8 @@ authors = ["Ian Kronquist <iankronquist@gmail.com>"]
 [dependencies]
 spin = {version = "0.4"}
 allocator = {path = "libs/allocator"}
+lazy_static = {features = ["spin_no_std"], version = "0.2" }
+
 
 [features]
 runtime_tests = []
