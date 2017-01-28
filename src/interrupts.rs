@@ -135,9 +135,6 @@ pub mod runtime_tests {
                                 -> bool {
         assert_eq!(interrupt_number, 0);
         info!("Handling division by zero interrupt.");
-        // A div instruction is three bytes long. If we return without
-        // advancing the rip we'll execute the same instruction again and wind
-        // up in a fault loop.
         regs.rip = _after_division as u64;
         true
     }
