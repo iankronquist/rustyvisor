@@ -19,8 +19,9 @@ struct IDTEntry {
 #[derive(Default)]
 pub struct IDT([IDTEntry; 20]);
 
+
 lazy_static! {
-    static ref INTERRUPT_TABLE: RwLock<DispatchTable<u64>> = RwLock::new(DispatchTable::new(256));
+    static ref INTERRUPT_TABLE: RwLock<DispatchTable<u64, InterruptCPUState>> = RwLock::new(DispatchTable::new(256));
     static ref DESCRIPTOR_TABLE: RwLock<IDT> = RwLock::new(Default::default());
 }
 
@@ -65,7 +66,7 @@ pub struct InterruptCPUState {
 
 pub fn register_interrupt_handler(interrupt: u64,
                                   stub: InterruptHandlerFn,
-                                  handler: DispatchFn<u64>) {
+                                  handler: DispatchFn<u64, InterruptCPUState>) {
     INTERRUPT_TABLE.write().register(interrupt, handler);
     DESCRIPTOR_TABLE.write().set_entry(interrupt as usize, stub as u64, 0x08, 0x8e);
 }
@@ -76,10 +77,10 @@ pub fn unregister_interrupt_handler(interrupt: u64) {
 
 #[no_mangle]
 pub extern "C" fn dispatch_interrupt(state: &mut InterruptCPUState) {
-    INTERRUPT_TABLE.read().dispatch(&state.interrupt_number);
+    INTERRUPT_TABLE.read().dispatch(state.interrupt_number, state);
 }
 
-fn default_handler(_interrupt_number: &u64) -> bool {
+fn default_handler(_interrupt_number: u64, _regs: &mut InterruptCPUState) -> bool {
     true
 }
 
@@ -159,7 +160,7 @@ pub mod runtime_tests {
 
         {
             cli::ClearLocalInterruptsGuard::new();
-            let idt_desc = interrupts::new_host_idt_descriptor();
+            let idt_desc = new_host_idt_descriptor();
             vmx::lidt(&idt_desc);
         }
 
