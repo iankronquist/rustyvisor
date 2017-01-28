@@ -140,6 +140,7 @@ pub mod runtime_tests {
 
     pub fn run() {
         test_load_and_restore_idt();
+        test_divide_by_zero_interrupt();
     }
 
     fn test_load_and_restore_idt() {
@@ -151,24 +152,39 @@ pub mod runtime_tests {
         vmx::lidt(&orig_idt_desc);
     }
 
-    /*
-    fn division_by_zero_handler() {
-
+    fn division_by_zero_handler(interrupt_number: u64, regs: &mut interrupts::InterruptCPUState) -> bool {
+        assert_eq!(interrupt_number, 0);
+        // A div instruction is three bytes long. If we return without
+        // advancing the rip we'll execute the same instruction again and wind
+        // up in a fault loop.
+        regs.rip += 3;
+        true
     }
 
+     #[allow(unused_variables)]
     fn test_divide_by_zero_interrupt() {
         let mut orig_idt_desc: vmx::CPUTableDescriptor = Default::default();
+        interrupts::register_interrupt_handler(0, interrupts::_isr0, division_by_zero_handler);
 
         {
             cli::ClearLocalInterruptsGuard::new();
             let idt_desc = new_host_idt_descriptor();
+            vmx::sidt(&mut orig_idt_desc);
             vmx::lidt(&idt_desc);
         }
+
+        vmx::sti();
 
         let a = 10;
         let b = 0;
         let c = a / b; // Division by zero interrupt
+        assert!(true); // If we get here the test must have succeeded
+
+        {
+            cli::ClearLocalInterruptsGuard::new();
+            vmx::lidt(&orig_idt_desc);
+        }
+
 
     }
-    */
 }
