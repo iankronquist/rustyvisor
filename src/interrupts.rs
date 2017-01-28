@@ -20,7 +20,7 @@ struct IDTEntry {
 
 fn new_host_idt_descriptor() -> vmx::CPUTableDescriptor {
     let base = (*DESCRIPTOR_TABLE.write()).0.as_ptr() as u64;
-    vmx::CPUTableDescriptor{
+    vmx::CPUTableDescriptor {
         base: base,
         limit: (mem::size_of::<IDT>() - 1) as u16,
     }
@@ -48,32 +48,34 @@ impl IDT {
 
 #[repr(C)]
 pub struct InterruptCPUState {
-	ds: u64,
-	r15: u64,
-	r14: u64,
-	r13: u64,
-	r12: u64,
-	r11: u64,
-	r10: u64,
-	r9: u64,
-	r8: u64,
-	rdi: u64,
-	rsi: u64,
-	rbp: u64,
-	rdx: u64,
-	rcx: u64,
-	rbx: u64,
-	rax: u64,
-	interrupt_number: u64,
-	error_code: u64,
-	rip: u64,
-	cs: u64,
-	rflags: u64,
-	rsp: u64,
-	ss: u64,
+    ds: u64,
+    r15: u64,
+    r14: u64,
+    r13: u64,
+    r12: u64,
+    r11: u64,
+    r10: u64,
+    r9: u64,
+    r8: u64,
+    rdi: u64,
+    rsi: u64,
+    rbp: u64,
+    rdx: u64,
+    rcx: u64,
+    rbx: u64,
+    rax: u64,
+    interrupt_number: u64,
+    error_code: u64,
+    rip: u64,
+    cs: u64,
+    rflags: u64,
+    rsp: u64,
+    ss: u64,
 }
 
-pub fn register_interrupt_handler(interrupt: u64, stub: InterruptHandlerFn, handler: DispatchFn<u64>) {
+pub fn register_interrupt_handler(interrupt: u64,
+                                  stub: InterruptHandlerFn,
+                                  handler: DispatchFn<u64>) {
     INTERRUPT_TABLE.write().register(interrupt, handler);
     DESCRIPTOR_TABLE.write().set_entry(interrupt as usize, stub as u64, 0x08, 0x8e);
 }
@@ -115,7 +117,9 @@ extern "C" {
     fn _isr19() -> !;
 }
 
-const ISR: [InterruptHandlerFn; 20] = [_isr0, _isr1, _isr2, _isr3, _isr4, _isr5, _isr6, _isr7, _isr8, _isr9, _isr10, _isr11, _isr12, _isr13, _isr14, _isr15, _isr16, _isr17, _isr18, _isr19];
+const ISR: [InterruptHandlerFn; 20] = [_isr0, _isr1, _isr2, _isr3, _isr4, _isr5, _isr6, _isr7,
+                                       _isr8, _isr9, _isr10, _isr11, _isr12, _isr13, _isr14,
+                                       _isr15, _isr16, _isr17, _isr18, _isr19];
 
 pub fn init_interrupt_handlers() {
     for i in 0..20 {

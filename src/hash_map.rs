@@ -47,7 +47,7 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
         HashMap {
             count: 0,
             table: RwLock::new(table),
-            rebalance_factor: 4
+            rebalance_factor: 4,
         }
     }
 
