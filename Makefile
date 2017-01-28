@@ -23,10 +23,10 @@ test:
 	cd libs/allocator && $(CARGO) test --verbose
 	$(CARGO) test --verbose
 
-
 clean:
-	rm -f *.o *.ko *.ko.unsigned modules.order Module.symvers *.mod.c .*.cmd
+	rm -f *.o *.ko *.ko.unsigned modules.order Module.symvers *.mod.c .*.cmd $($(MODULENAME)-objs)
 	rm -rf .tmp_versions
+	rm -f $($(MODULENAME)-objs)
 	$(XARGO) clean
 
 .PHONY: all clean test
