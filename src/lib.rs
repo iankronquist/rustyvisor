@@ -15,6 +15,8 @@ extern crate spin;
 extern crate lazy_static;
 #[macro_use]
 extern crate collections;
+#[macro_use]
+extern crate log;
 
 #[macro_use]
 pub mod linux;
@@ -26,6 +28,7 @@ pub mod hash_map;
 pub mod interrupts;
 pub mod runtime;
 pub mod vmx;
+pub mod dmesg_logger;
 
 #[no_mangle]
 pub extern "C" fn entry(_heap: *mut u8, _heap_size: u64, _: *mut u8, _: u64) -> u32 {
@@ -33,25 +36,27 @@ pub extern "C" fn entry(_heap: *mut u8, _heap_size: u64, _: *mut u8, _: u64) -> 
         linux::printk(cstring!("Hello Linux!\n"));
     }
 
+    #[cfg(not(test))]
+    {
+        allocator::init_global_allocator(_heap_size, _heap);
+        match dmesg_logger::init() {
+            Ok(()) => {},
+            Err(_e) => return 1,
+        }
+    }
+
     #[cfg(feature = "runtime_tests")]
     runtime_tests();
 
-
-    #[cfg(not(test))]
-    allocator::init_global_allocator(_heap_size, _heap);
     0
 }
 
 #[cfg(feature = "runtime_tests")]
 fn runtime_tests() {
-    unsafe {
-        linux::printk(cstring!("Executing runtime tests...\n"));
-    }
+    info!("Executing runtime tests...");
 
     gdt::runtime_tests::run();
     interrupts::runtime_tests::run();
 
-    unsafe {
-        linux::printk(cstring!("Runtime tests succeeded.\n"));
-    }
+    info!("Runtime tests succeeded");
 }
