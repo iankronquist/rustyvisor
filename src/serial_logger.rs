@@ -37,12 +37,23 @@ fn inb(port: SerialPortRegister) -> u8 {
 
 impl SerialLogger {
     fn init(&self) {
+        outw(SerialPortRegister::COM1InterruptControl, 0x00);
+        outw(SerialPortRegister::COM1ModemControl, 0x80);
+        outw(SerialPortRegister::COM1Data, 0x01);
+        outw(SerialPortRegister::COM1InterruptControl, 0x00);
+        outw(SerialPortRegister::COM1ModemControl, 0x03);
+        outw(SerialPortRegister::COM1LineControl, 0xc7);
+        outw(SerialPortRegister::COM1LineStatus, 0x0b);
+        outw(SerialPortRegister::COM1InterruptControl, 0x01);
+
+        /*
         outw(SerialPortRegister::COM1LineControl, 0x83);
         outw(SerialPortRegister::COM1Data, 0x01);
         outw(SerialPortRegister::COM1InterruptControl, 0x00);
         outw(SerialPortRegister::COM1InterruptControl, 0x03);
         outw(SerialPortRegister::COM1ModemControl, 0x03);
         inb(SerialPortRegister::COM1Data);
+        */
     }
 
     fn write_string(&self, s: String) {
