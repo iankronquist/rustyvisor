@@ -1,4 +1,5 @@
 use vmx;
+use core::mem;
 
 #[repr(packed)]
 #[allow(dead_code)]
@@ -48,7 +49,7 @@ const GDT: [GDTEntry; 3] = [GDTEntry {
 
 pub fn new_host_descriptor() -> vmx::CPUTableDescriptor {
     vmx::CPUTableDescriptor {
-        limit: 0xffff,
+        limit: (mem::size_of::<[GDTEntry; 3]>() - 1) as u16,
         base: GDT.as_ptr() as u64,
     }
 }
