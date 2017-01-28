@@ -349,9 +349,9 @@ pub fn vmptrst() -> Result<u64, u32> {
 pub fn lidt(idt_desc: *const CPUTableDescriptor) {
     unsafe {
         asm!(
-            "lidt $0"
+            "lidt ($0)"
             :
-            : "m"(idt_desc)
+            : "r"(idt_desc)
             :
             );
     }
@@ -382,9 +382,9 @@ pub fn sgdt(gdt_desc: *mut CPUTableDescriptor) {
 pub fn sidt(idt_desc: *mut CPUTableDescriptor) {
     unsafe {
         asm!(
-            "sidt $0"
+            "sidt ($0)"
             :
-            : "m"(idt_desc)
+            : "r"(idt_desc)
             :
             );
     }
