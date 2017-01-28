@@ -24,7 +24,7 @@ struct Bucket<K: Hash + cmp::PartialEq, V> {
 pub struct HashMap<K: Hash + cmp::PartialEq, V> {
     count: usize,
     table: RwLock<Vec<HashMapMember<K, V>>>,
-    rebalance_factor: f32,
+    rebalance_factor: usize,
 }
 
 
@@ -47,13 +47,14 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
         HashMap {
             count: 0,
             table: RwLock::new(table),
-            rebalance_factor: 0.75,
+            rebalance_factor: 4
         }
     }
 
 
-    fn calculate_load(&self) -> f32 {
-        self.count as f32 / self.table.read().len() as f32
+    fn should_resize(&self) -> bool {
+        let size = self.table.read().len();
+        (size - self.count) < (size / self.rebalance_factor)
     }
 
 
@@ -99,7 +100,7 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
 
     pub fn insert_rc(&mut self, key: K, value: Arc<V>) {
         self.count += 1;
-        if self.calculate_load() >= self.rebalance_factor {
+        if self.should_resize() {
             self.rebalance();
         }
         let index = self.get_index(&key);
@@ -242,17 +243,17 @@ mod tests {
 
         ht.insert(3, 3);
         assert_eq!(ht.count, 4);
-        assert!(ht.calculate_load() < ht.rebalance_factor);
+        assert!(!ht.should_resize());
         assert_eq!(ht.table.read().len(), 8);
 
         ht.insert(4, 4);
         assert_eq!(ht.count, 5);
-        assert!(ht.calculate_load() < ht.rebalance_factor);
+        assert!(!ht.should_resize());
         assert_eq!(ht.table.read().len(), 8);
 
         ht.insert(5, 5);
         assert_eq!(ht.count, 6);
-        assert!(ht.calculate_load() < ht.rebalance_factor);
+        assert!(!ht.should_resize());
         assert_eq!(ht.table.read().len(), 16);
     }
 }
