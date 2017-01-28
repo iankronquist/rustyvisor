@@ -14,7 +14,7 @@ impl<T: cmp::Eq + hash::Hash> DispatchTable<T> {
         DispatchTable { table: HashMap::new(size) }
     }
 
-    pub fn dispatch(&mut self, event: &T) -> bool {
+    pub fn dispatch(&self, event: &T) -> bool {
         match self.table.get(event) {
             Some(func) => func(event),
             None => false,
