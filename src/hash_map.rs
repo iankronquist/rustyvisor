@@ -54,7 +54,7 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
 
     fn should_resize(&self) -> bool {
         let size = self.table.read().len();
-        (size - self.count) < (size / self.rebalance_factor)
+        (size - self.count) <= (size / self.rebalance_factor)
     }
 
 
