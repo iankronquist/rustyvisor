@@ -97,15 +97,6 @@ pub mod runtime_tests {
     use interrupts;
     use vmx;
     use cli;
-    use isr;
-    use core::mem;
-
-    extern "C" {
-        fn _test_division_by_zero_routine() -> bool;
-
-        // DO NOT CALL THIS FUNCTION. YOU WILL MESS UP THE STACK.
-        fn _after_division() -> bool;
-    }
 
     fn new_host_idt_descriptor() -> vmx::CPUTableDescriptor {
         let base = (*interrupts::DESCRIPTOR_TABLE.write()).0.as_ptr() as u64;
@@ -115,10 +106,8 @@ pub mod runtime_tests {
         }
     }
 
-
     pub fn run() {
         test_load_and_restore_idt();
-        test_divide_by_zero_interrupt();
     }
 
     fn test_load_and_restore_idt() {
@@ -128,42 +117,5 @@ pub mod runtime_tests {
         vmx::sidt(&mut orig_idt_desc);
         vmx::lidt(&idt_desc);
         vmx::lidt(&orig_idt_desc);
-    }
-
-    fn division_by_zero_handler(interrupt_number: u64,
-                                regs: &mut interrupts::InterruptCPUState)
-                                -> bool {
-        assert_eq!(interrupt_number, 0);
-        info!("Handling division by zero interrupt.");
-        regs.rip = _after_division as u64;
-        true
-    }
-
-    #[allow(unused_variables)]
-    fn test_divide_by_zero_interrupt() {
-        let mut orig_idt_desc: vmx::CPUTableDescriptor = Default::default();
-        interrupts::register_interrupt_handler(0, isr::_isr0, division_by_zero_handler);
-
-        {
-            cli::ClearLocalInterruptsGuard::new();
-            let idt_desc = new_host_idt_descriptor();
-            vmx::sidt(&mut orig_idt_desc);
-            vmx::lidt(&idt_desc);
-        }
-
-        info!("Here we go!");
-
-        unsafe {
-            assert!(_test_division_by_zero_routine());
-        }
-
-        info!("Successfully returned from a division by zero interrupt.");
-
-        {
-            cli::ClearLocalInterruptsGuard::new();
-            vmx::lidt(&orig_idt_desc);
-        }
-
-
     }
 }
