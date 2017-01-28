@@ -40,27 +40,32 @@ mod test {
         PageFault,
     }
 
-    fn on_vmexit(_: &Event, received: bool) -> bool {
-        assert!(received);
+    fn on_vmexit(_: Event, received: &mut bool) -> bool {
+        *received = !(*received);
         true
     }
 
     #[test]
     fn test_dispatch_table_register() {
         let mut dt = DispatchTable::<Event, bool>::new(16);
+        let mut arg = true;
         dt.register(Event::VMExit, on_vmexit);
-        assert!(dt.dispatch(&Event::VMExit, true));
-        assert!(!dt.dispatch(&Event::PageFault, false));
+        assert!(dt.dispatch(Event::VMExit, &mut arg));
+        assert_eq!(arg, false);
+        assert!(!dt.dispatch(Event::PageFault, &mut arg));
+        assert_eq!(arg, false);
     }
 
     #[test]
     fn test_dispatch_table_unregister() {
         let mut dt = DispatchTable::<Event, bool>::new(16);
+        let mut arg = true;
         dt.register(Event::VMExit, on_vmexit);
-        assert!(dt.dispatch(&Event::VMExit, true));
-        assert!(!dt.dispatch(&Event::PageFault, false));
+        assert!(dt.dispatch(Event::VMExit, &mut arg));
+        assert_eq!(arg, false);
+        assert!(!dt.dispatch(Event::PageFault, &mut arg));
         dt.unregister(Event::VMExit);
-        assert!(!dt.dispatch(&Event::VMExit, false));
+        assert_eq!(arg, false);
+        assert!(!dt.dispatch(Event::VMExit, &mut arg));
     }
-
 }
