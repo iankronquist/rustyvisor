@@ -175,7 +175,7 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
 
 #[cfg(test)]
 mod tests {
-    use alloc::rc::Arc;
+    use alloc::arc::Arc;
     use super::HashMap;
 
 
