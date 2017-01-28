@@ -3,8 +3,6 @@ type InterruptHandlerFn = unsafe extern "C" fn() -> !;
 
 use dispatch_table::{DispatchTable, DispatchFn};
 use spin::RwLock;
-use vmx;
-use core::mem;
 
 #[derive(Default)]
 #[repr(packed)]
@@ -16,14 +14,6 @@ struct IDTEntry {
     base_high: u16,
     base_highest: u32,
     _reserved: u32,
-}
-
-fn new_host_idt_descriptor() -> vmx::CPUTableDescriptor {
-    let base = (*DESCRIPTOR_TABLE.write()).0.as_ptr() as u64;
-    vmx::CPUTableDescriptor {
-        base: base,
-        limit: (mem::size_of::<IDT>() - 1) as u16,
-    }
 }
 
 #[derive(Default)]
@@ -135,6 +125,16 @@ pub mod runtime_tests {
     use interrupts;
     use vmx;
     use cli;
+    use core::mem;
+
+    fn new_host_idt_descriptor() -> vmx::CPUTableDescriptor {
+        let base = (*interrupts::DESCRIPTOR_TABLE.write()).0.as_ptr() as u64;
+        vmx::CPUTableDescriptor {
+            base: base,
+            limit: (mem::size_of::<interrupts::IDT>() - 1) as u16,
+        }
+    }
+
 
     pub fn run() {
         test_load_and_restore_idt();
@@ -142,7 +142,7 @@ pub mod runtime_tests {
 
     fn test_load_and_restore_idt() {
         cli::ClearLocalInterruptsGuard::new();
-        let idt_desc = interrupts::new_host_idt_descriptor();
+        let idt_desc = new_host_idt_descriptor();
         let mut orig_idt_desc: vmx::CPUTableDescriptor = Default::default();
         vmx::sidt(&mut orig_idt_desc);
         vmx::lidt(&idt_desc);
