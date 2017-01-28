@@ -1,9 +1,8 @@
-type InterruptHandlerFn = unsafe extern "C" fn() -> !;
-
 use dispatch_table::{DispatchTable, DispatchFn};
 use spin::RwLock;
+use isr;
 
-#[derive(Default)]
+#[derive(Copy, Clone, Default)]
 #[repr(packed)]
 struct IDTEntry {
     base_low: u16,
@@ -15,14 +14,13 @@ struct IDTEntry {
     _reserved: u32,
 }
 
-#[derive(Default)]
-pub struct IDT([IDTEntry; 20]);
+pub struct IDT([IDTEntry; 256]);
 
 
 lazy_static! {
     static ref INTERRUPT_TABLE: RwLock<DispatchTable<u64, InterruptCPUState>> =
         RwLock::new(DispatchTable::new(256));
-    static ref DESCRIPTOR_TABLE: RwLock<IDT> = RwLock::new(Default::default());
+    static ref DESCRIPTOR_TABLE: RwLock<IDT> = RwLock::new(IDT([Default::default(); 256]));
 }
 
 
@@ -65,7 +63,7 @@ pub struct InterruptCPUState {
 }
 
 pub fn register_interrupt_handler(interrupt: u64,
-                                  stub: InterruptHandlerFn,
+                                  stub: isr::InterruptServiceRoutine,
                                   handler: DispatchFn<u64, InterruptCPUState>) {
     INTERRUPT_TABLE.write().register(interrupt, handler);
     DESCRIPTOR_TABLE.write().set_entry(interrupt as usize, stub as u64, 0x08, 0x8e);
@@ -85,36 +83,9 @@ fn default_handler(_interrupt_number: u64, _regs: &mut InterruptCPUState) -> boo
 }
 
 
-extern "C" {
-    fn _isr0() -> !;
-    fn _isr1() -> !;
-    fn _isr2() -> !;
-    fn _isr3() -> !;
-    fn _isr4() -> !;
-    fn _isr5() -> !;
-    fn _isr6() -> !;
-    fn _isr7() -> !;
-    fn _isr8() -> !;
-    fn _isr9() -> !;
-    fn _isr10() -> !;
-    fn _isr11() -> !;
-    fn _isr12() -> !;
-    fn _isr13() -> !;
-    fn _isr14() -> !;
-    fn _isr15() -> !;
-    fn _isr16() -> !;
-    fn _isr17() -> !;
-    fn _isr18() -> !;
-    fn _isr19() -> !;
-}
-
-const ISR: [InterruptHandlerFn; 20] = [_isr0, _isr1, _isr2, _isr3, _isr4, _isr5, _isr6, _isr7,
-                                       _isr8, _isr9, _isr10, _isr11, _isr12, _isr13, _isr14,
-                                       _isr15, _isr16, _isr17, _isr18, _isr19];
-
 pub fn init_interrupt_handlers() {
     for i in 0..20 {
-        register_interrupt_handler(i, ISR[i as usize], default_handler);
+        register_interrupt_handler(i, isr::ISR[i as usize], default_handler);
     }
 }
 
@@ -126,6 +97,7 @@ pub mod runtime_tests {
     use interrupts;
     use vmx;
     use cli;
+    use isr;
     use core::mem;
 
     extern "C" {
@@ -173,7 +145,7 @@ pub mod runtime_tests {
     #[allow(unused_variables)]
     fn test_divide_by_zero_interrupt() {
         let mut orig_idt_desc: vmx::CPUTableDescriptor = Default::default();
-        interrupts::register_interrupt_handler(0, interrupts::_isr0, division_by_zero_handler);
+        interrupts::register_interrupt_handler(0, isr::_isr0, division_by_zero_handler);
 
         {
             cli::ClearLocalInterruptsGuard::new();

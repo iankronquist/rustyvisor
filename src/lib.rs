@@ -26,6 +26,7 @@ pub mod dispatch_table;
 pub mod gdt;
 pub mod hash_map;
 pub mod interrupts;
+pub mod isr;
 pub mod runtime;
 pub mod vmx;
 pub mod dmesg_logger;
