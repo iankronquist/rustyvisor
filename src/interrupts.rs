@@ -154,7 +154,7 @@ pub mod runtime_tests {
             vmx::lidt(&idt_desc);
         }
 
-        vmx::sti();
+        info!("Here we go!");
 
         unsafe {
             assert!(_test_division_by_zero_routine());
