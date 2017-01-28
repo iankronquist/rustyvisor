@@ -12,6 +12,8 @@ extern crate alloc;
 extern crate allocator;
 extern crate spin;
 #[macro_use]
+extern crate lazy_static;
+#[macro_use]
 extern crate collections;
 
 #[macro_use]
