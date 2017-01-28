@@ -13,7 +13,7 @@ CARFOFEATURES="runtime_tests"
 
 all: $(MODULENAME).ko
 
-$(MODULENAME).ko: loader/linux.c target/$(TARGET)/$(RELEASE)/lib$(MODULENAME).a
+$(MODULENAME).ko: loader/linux.c src/interrupts.S src/interrupts.o target/$(TARGET)/$(RELEASE)/lib$(MODULENAME).a
 	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules
 
 target/$(TARGET)/$(RELEASE)/lib$(MODULENAME).a: $(RUSTFILES) Cargo.toml
