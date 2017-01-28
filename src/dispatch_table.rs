@@ -10,8 +10,8 @@ pub struct DispatchTable<T: cmp::Eq + hash::Hash> {
 }
 
 impl<T: cmp::Eq + hash::Hash> DispatchTable<T> {
-    pub fn new() -> Self {
-        DispatchTable { table: HashMap::new(16) }
+    pub fn new(size: usize) -> Self {
+        DispatchTable { table: HashMap::new(size) }
     }
 
     pub fn dispatch(&mut self, event: &T) -> bool {
@@ -46,7 +46,7 @@ mod test {
 
     #[test]
     fn test_dispatch_table_register() {
-        let mut dt = DispatchTable::<Event>::new();
+        let mut dt = DispatchTable::<Event>::new(16);
         dt.register(Event::VMExit, on_vmexit);
         assert!(dt.dispatch(&Event::VMExit));
         assert!(!dt.dispatch(&Event::PageFault));
@@ -54,7 +54,7 @@ mod test {
 
     #[test]
     fn test_dispatch_table_unregister() {
-        let mut dt = DispatchTable::<Event>::new();
+        let mut dt = DispatchTable::<Event>::new(16);
         dt.register(Event::VMExit, on_vmexit);
         assert!(dt.dispatch(&Event::VMExit));
         assert!(!dt.dispatch(&Event::PageFault));
