@@ -14,9 +14,9 @@ impl log::Log for DMesgLogger {
 
     fn log(&self, record: &LogRecord) {
         if self.enabled(record.metadata()) {
-            let log_message = format!("{}: {}", record.level(), record.args());
+            let log_message = format!("{}: {}\0", record.level(), record.args());
             unsafe {
-                linux::printk(cstring!("%s\n"), log_message);
+                linux::printk(cstring!("%s\n"), log_message.as_ptr());
             }
         }
     }
