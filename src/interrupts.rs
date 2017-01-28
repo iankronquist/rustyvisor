@@ -21,7 +21,8 @@ pub struct IDT([IDTEntry; 20]);
 
 
 lazy_static! {
-    static ref INTERRUPT_TABLE: RwLock<DispatchTable<u64, InterruptCPUState>> = RwLock::new(DispatchTable::new(256));
+    static ref INTERRUPT_TABLE: RwLock<DispatchTable<u64, InterruptCPUState>> =
+        RwLock::new(DispatchTable::new(256));
     static ref DESCRIPTOR_TABLE: RwLock<IDT> = RwLock::new(Default::default());
 }
 
