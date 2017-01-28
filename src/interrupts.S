@@ -66,6 +66,28 @@ _handle_interrupt:
 	sti
 	iret
 
+
+.global _test_division_by_zero_routine
+.type _test_division_by_zero_routine, @function
+_test_division_by_zero_routine:
+	push %rdx
+	# Divide 0 / 0
+	# Numerator
+	mov $0, %rdx
+	mov $0, %rax
+	# Denominator
+	mov $0, %rsi
+	# Hold your breath
+	div %rsi
+
+.global _after_division
+_after_division:
+	# return true
+	mov $1, %rax
+	pop %rdx
+	ret
+
+
 .macro interrupt number
 	.global _isr\number
 	.type _isr\number, @function

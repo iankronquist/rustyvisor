@@ -1,4 +1,3 @@
-
 type InterruptHandlerFn = unsafe extern "C" fn() -> !;
 
 use dispatch_table::{DispatchTable, DispatchFn};
@@ -129,6 +128,13 @@ pub mod runtime_tests {
     use cli;
     use core::mem;
 
+    extern "C" {
+        fn _test_division_by_zero_routine() -> bool;
+
+        // DO NOT CALL THIS FUNCTION. YOU WILL MESS UP THE STACK.
+        fn _after_division() -> bool;
+    }
+
     fn new_host_idt_descriptor() -> vmx::CPUTableDescriptor {
         let base = (*interrupts::DESCRIPTOR_TABLE.write()).0.as_ptr() as u64;
         vmx::CPUTableDescriptor {
@@ -156,10 +162,11 @@ pub mod runtime_tests {
                                 regs: &mut interrupts::InterruptCPUState)
                                 -> bool {
         assert_eq!(interrupt_number, 0);
+        info!("Handling division by zero interrupt.");
         // A div instruction is three bytes long. If we return without
         // advancing the rip we'll execute the same instruction again and wind
         // up in a fault loop.
-        regs.rip += 3;
+        regs.rip = _after_division as u64;
         true
     }
 
@@ -177,12 +184,11 @@ pub mod runtime_tests {
 
         vmx::sti();
 
-        let a = 10;
-        let b = 0;
-        // Division by zero interrupt
-        let c = a / b;
-        // If we get here the test must have succeeded
-        assert!(true);
+        unsafe {
+            assert!(_test_division_by_zero_routine());
+        }
+
+        info!("Successfully returned from a division by zero interrupt.");
 
         {
             cli::ClearLocalInterruptsGuard::new();
