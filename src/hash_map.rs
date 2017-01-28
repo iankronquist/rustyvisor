@@ -1,4 +1,4 @@
-use alloc::rc::Rc;
+use alloc::arc::Arc;
 use spin::RwLock;
 use core::hash::{Hash, Hasher};
 // Compiler warns about a field not exported in core.
@@ -17,7 +17,7 @@ enum HashMapMember<K: Hash + cmp::PartialEq, V> {
 
 struct Bucket<K: Hash + cmp::PartialEq, V> {
     key: K,
-    value: Rc<V>,
+    value: Arc<V>,
 }
 
 
@@ -29,7 +29,7 @@ pub struct HashMap<K: Hash + cmp::PartialEq, V> {
 
 
 impl<K: Hash + cmp::PartialEq, V> Bucket<K, V> {
-    fn new(key: K, value: Rc<V>) -> Self {
+    fn new(key: K, value: Arc<V>) -> Self {
         Bucket {
             key: key,
             value: value,
@@ -97,7 +97,7 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
     }
 
 
-    pub fn insert_rc(&mut self, key: K, value: Rc<V>) {
+    pub fn insert_rc(&mut self, key: K, value: Arc<V>) {
         self.count += 1;
         if self.calculate_load() >= self.rebalance_factor {
             self.rebalance();
@@ -126,7 +126,7 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
 
 
     pub fn insert(&mut self, key: K, value: V) {
-        self.insert_rc(key, Rc::new(value))
+        self.insert_rc(key, Arc::new(value))
     }
 
 
@@ -151,7 +151,7 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
     }
 
 
-    pub fn get(&self, key: &K) -> Option<Rc<V>> {
+    pub fn get(&self, key: &K) -> Option<Arc<V>> {
         let index = self.get_index(key);
         let mut table = self.table.write();
         let (begin, end) = table.split_at_mut(index);
@@ -174,7 +174,7 @@ impl<K: Hash + cmp::PartialEq, V> HashMap<K, V> {
 
 #[cfg(test)]
 mod tests {
-    use alloc::rc::Rc;
+    use alloc::rc::Arc;
     use super::HashMap;
 
 
@@ -206,7 +206,7 @@ mod tests {
         let k = 42;
         ht.insert(k, 43);
         assert!(ht.contains(&k));
-        assert_eq!(ht.get(&k), Some(Rc::new(43)));
+        assert_eq!(ht.get(&k), Some(Arc::new(43)));
 
         ht.remove(42);
         assert!(!ht.contains(&k));
@@ -214,11 +214,11 @@ mod tests {
 
         ht.insert(42, 44);
         assert!(ht.contains(&k));
-        assert_eq!(ht.get(&k), Some(Rc::new(44)));
+        assert_eq!(ht.get(&k), Some(Arc::new(44)));
 
         ht.insert(42, 45);
         assert!(ht.contains(&k));
-        assert_eq!(ht.get(&k), Some(Rc::new(45)));
+        assert_eq!(ht.get(&k), Some(Arc::new(45)));
     }
 
     #[test]
