@@ -61,8 +61,11 @@ pub mod runtime_tests {
     use vmx;
     use super::new_host_descriptor;
 
+    pub fn run() {
+        test_load_and_restore_gdt();
+    }
 
-    pub fn test_load() {
+    fn test_load_and_restore_gdt() {
         cli::ClearLocalInterruptsGuard::new();
         let gdt_desc = new_host_descriptor();
         let mut orig_gdt_desc: vmx::CPUTableDescriptor = Default::default();
