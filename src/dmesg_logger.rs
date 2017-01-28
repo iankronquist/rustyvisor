@@ -20,7 +20,6 @@ impl log::Log for DMesgLogger {
             }
         }
     }
-
 }
 
 pub fn init() -> Result<(), log::SetLoggerError> {
@@ -33,5 +32,5 @@ pub fn init() -> Result<(), log::SetLoggerError> {
     }
 }
 pub fn shutdown() -> Result<(), log::ShutdownLoggerError> {
-    log::shutdown_logger_raw().map(|_logger| { })
+    log::shutdown_logger_raw().map(|_logger| {})
 }

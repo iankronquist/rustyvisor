@@ -40,7 +40,7 @@ pub extern "C" fn entry(_heap: *mut u8, _heap_size: u64, _: *mut u8, _: u64) -> 
     {
         allocator::init_global_allocator(_heap_size, _heap);
         match dmesg_logger::init() {
-            Ok(()) => {},
+            Ok(()) => {}
             Err(_e) => return 1,
         }
     }

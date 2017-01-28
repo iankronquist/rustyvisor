@@ -152,7 +152,9 @@ pub mod runtime_tests {
         vmx::lidt(&orig_idt_desc);
     }
 
-    fn division_by_zero_handler(interrupt_number: u64, regs: &mut interrupts::InterruptCPUState) -> bool {
+    fn division_by_zero_handler(interrupt_number: u64,
+                                regs: &mut interrupts::InterruptCPUState)
+                                -> bool {
         assert_eq!(interrupt_number, 0);
         // A div instruction is three bytes long. If we return without
         // advancing the rip we'll execute the same instruction again and wind
@@ -161,7 +163,7 @@ pub mod runtime_tests {
         true
     }
 
-     #[allow(unused_variables)]
+    #[allow(unused_variables)]
     fn test_divide_by_zero_interrupt() {
         let mut orig_idt_desc: vmx::CPUTableDescriptor = Default::default();
         interrupts::register_interrupt_handler(0, interrupts::_isr0, division_by_zero_handler);
@@ -177,8 +179,10 @@ pub mod runtime_tests {
 
         let a = 10;
         let b = 0;
-        let c = a / b; // Division by zero interrupt
-        assert!(true); // If we get here the test must have succeeded
+        // Division by zero interrupt
+        let c = a / b;
+        // If we get here the test must have succeeded
+        assert!(true);
 
         {
             cli::ClearLocalInterruptsGuard::new();
