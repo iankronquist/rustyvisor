@@ -29,7 +29,7 @@ pub mod interrupts;
 pub mod isr;
 pub mod runtime;
 pub mod vmx;
-pub mod dmesg_logger;
+pub mod serial_logger;
 
 #[no_mangle]
 pub extern "C" fn entry(_heap: *mut u8, _heap_size: u64, _: *mut u8, _: u64) -> u32 {
@@ -40,7 +40,7 @@ pub extern "C" fn entry(_heap: *mut u8, _heap_size: u64, _: *mut u8, _: u64) -> 
     #[cfg(not(test))]
     {
         allocator::init_global_allocator(_heap_size, _heap);
-        match dmesg_logger::init() {
+        match serial_logger::init() {
             Ok(()) => {}
             Err(_e) => return 1,
         }
