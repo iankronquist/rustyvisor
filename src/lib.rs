@@ -23,6 +23,7 @@ pub mod cli;
 pub mod dispatch_table;
 pub mod gdt;
 pub mod hash_map;
+pub mod interrupts;
 pub mod runtime;
 pub mod vmx;
 
