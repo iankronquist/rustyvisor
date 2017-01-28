@@ -130,5 +130,39 @@ pub mod runtime_tests {
 
     use interrupts;
     use vmx;
+    use cli;
 
+    pub fn run() {
+        test_load_and_restore_idt();
+    }
+
+    fn test_load_and_restore_idt() {
+        cli::ClearLocalInterruptsGuard::new();
+        let idt_desc = interrupts::new_host_idt_descriptor();
+        let mut orig_idt_desc: vmx::CPUTableDescriptor = Default::default();
+        vmx::sidt(&mut orig_idt_desc);
+        vmx::lidt(&idt_desc);
+        vmx::lidt(&orig_idt_desc);
+    }
+
+    /*
+    fn division_by_zero_handler() {
+
+    }
+
+    fn test_divide_by_zero_interrupt() {
+        let mut orig_idt_desc: vmx::CPUTableDescriptor = Default::default();
+
+        {
+            cli::ClearLocalInterruptsGuard::new();
+            let idt_desc = interrupts::new_host_idt_descriptor();
+            vmx::lidt(&idt_desc);
+        }
+
+        let a = 10;
+        let b = 0;
+        let c = a / b; // Division by zero interrupt
+
+    }
+    */
 }
