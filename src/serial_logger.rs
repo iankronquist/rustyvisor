@@ -58,7 +58,7 @@ impl SerialLogger {
 
     fn write_string(&self, s: String) {
         for c in s.chars() {
-            while (inb(SerialPortRegister::COM1LineStatus) & 0x20) != 0 {}
+            while (inb(SerialPortRegister::COM1LineStatus) & 0x20) == 0 {}
             outb(SerialPortRegister::COM1Data, c as u8);
         }
     }
