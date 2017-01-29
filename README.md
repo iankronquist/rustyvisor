@@ -24,7 +24,8 @@ $ source ~/.cargo/env
 $ rustup install nightly
 $ rustup default nightly
 $ # Install development headers & GCC
-$ sudo apt-get install linux-headers-$(uname -r) gcc
+$ sudo apt-get install linux-headers-$(uname -r) gcc # ubuntu
+$ sudo dnf install kernel-devel-$(uname -r) # fedora
 $ # The cross compilation tool Xargo needs the rust source code
 $ rustup component add rust-src
 $ # Install Xargo
