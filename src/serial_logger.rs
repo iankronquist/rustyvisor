@@ -1,32 +1,23 @@
 use log;
-use log::{LogRecord, LogLevel, LogMetadata};
 use collections::String;
 
-#[repr(u16)]
-enum SerialPortRegister {
-    COM1Data = 0x3f8,
-    COM1InterruptControl = 0x3f9,
-    //COM1InterruptIDAndFIFO = 0x3fa,
-    COM1LineControl = 0x3fb,
-    COM1ModemControl = 0x3fc,
-    COM1LineStatus = 0x3fd,
-    //COM1ModemStatus = 0x3fe,
-    //COM1Scratch = 0x3ff,
-}
+const PORT: u16 = 0x3f8;
 
-fn outw(port: SerialPortRegister, data: u16) {
+struct SerialLogger(());
+
+fn outw(port: u16, data: u16) {
     unsafe {
         asm!("outw %ax, %dx" : : "{dx}" (port as u16), "{ax}" (data));
     }
 }
 
-fn outb(port: SerialPortRegister, data: u8) {
+fn outb(port: u16, data: u8) {
     unsafe {
         asm!("outb %al, %dx" : : "{dx}" (port as u16), "{al}" (data));
     }
 }
 
-fn inb(port: SerialPortRegister) -> u8 {
+fn inb(port: u16) -> u8 {
     let data: u8;
     unsafe {
         asm!("inb %dx, %al" : "={al}"(data) : "{dx}"(port as u16));
@@ -34,46 +25,32 @@ fn inb(port: SerialPortRegister) -> u8 {
     data
 }
 
-
 impl SerialLogger {
     fn init(&self) {
-        outw(SerialPortRegister::COM1InterruptControl, 0x00);
-        outw(SerialPortRegister::COM1ModemControl, 0x80);
-        outw(SerialPortRegister::COM1Data, 0x01);
-        outw(SerialPortRegister::COM1InterruptControl, 0x00);
-        outw(SerialPortRegister::COM1ModemControl, 0x03);
-        outw(SerialPortRegister::COM1LineControl, 0xc7);
-        outw(SerialPortRegister::COM1LineStatus, 0x0b);
-        outw(SerialPortRegister::COM1InterruptControl, 0x01);
-
-        /*
-        outw(SerialPortRegister::COM1LineControl, 0x83);
-        outw(SerialPortRegister::COM1Data, 0x01);
-        outw(SerialPortRegister::COM1InterruptControl, 0x00);
-        outw(SerialPortRegister::COM1InterruptControl, 0x03);
-        outw(SerialPortRegister::COM1ModemControl, 0x03);
-        inb(SerialPortRegister::COM1Data);
-        */
+        outw(PORT + 1, 0x00);
+        outw(PORT + 3, 0x80);
+        outw(PORT + 0, 0x01);
+        outw(PORT + 1, 0x00);
+        outw(PORT + 3, 0x03);
+        outw(PORT + 2, 0xc7);
+        outw(PORT + 4, 0x0b);
+        outw(PORT + 1, 0x01);
     }
 
     fn write_string(&self, s: String) {
         for c in s.chars() {
-            while (inb(SerialPortRegister::COM1LineStatus) & 0x20) == 0 {}
-            outb(SerialPortRegister::COM1Data, c as u8);
+            while (inb(PORT + 5) & 0x20) == 0 {}
+            outb(PORT, c as u8);
         }
     }
 }
 
-
-#[derive(Default)]
-struct SerialLogger(());
-
 impl log::Log for SerialLogger {
-    fn enabled(&self, metadata: &LogMetadata) -> bool {
-        metadata.level() <= LogLevel::Info
+    fn enabled(&self, metadata: &log::LogMetadata) -> bool {
+        metadata.level() <= log::LogLevel::Info
     }
 
-    fn log(&self, record: &LogRecord) {
+    fn log(&self, record: &log::LogRecord) {
         if self.enabled(record.metadata()) {
             let log_message = format!("{}: {}\n\0", record.level(), record.args());
             self.write_string(log_message);
