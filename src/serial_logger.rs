@@ -29,7 +29,7 @@ impl SerialLogger {
     fn init(&self) {
         outw(PORT + 1, 0x00);
         outw(PORT + 3, 0x80);
-        outw(PORT + 0, 0x01);
+        outw(PORT, 0x01);
         outw(PORT + 1, 0x00);
         outw(PORT + 3, 0x03);
         outw(PORT + 2, 0xc7);
