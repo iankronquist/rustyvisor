@@ -31,12 +31,10 @@ pub mod runtime;
 pub mod vmx;
 pub mod serial_logger;
 
+include!(concat!(env!("OUT_DIR"), "/version.rs"));
+
 #[no_mangle]
 pub extern "C" fn entry(_heap: *mut u8, _heap_size: u64, _: *mut u8, _: u64) -> u32 {
-    unsafe {
-        linux::printk(cstring!("Hello Linux!\n"));
-    }
-
     #[cfg(not(test))]
     {
         allocator::init_global_allocator(_heap_size, _heap);
@@ -45,6 +43,8 @@ pub extern "C" fn entry(_heap: *mut u8, _heap_size: u64, _: *mut u8, _: u64) -> 
             Err(_e) => return 1,
         }
     }
+
+    info!("{}", VERSION);
 
     #[cfg(feature = "runtime_tests")]
     runtime_tests();
