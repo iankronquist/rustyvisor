@@ -39,7 +39,7 @@ static mut ALLOCATOR: Mutex<Allocator> = Mutex::new(Allocator {
     free_list: None,
 });
 
-pub fn init_global_allocator(size: u64, raw_bytes: *mut u8) {
+pub fn init(size: u64, raw_bytes: *mut u8) {
     static mut CALLED: bool = false;
 
     unsafe {
@@ -49,7 +49,7 @@ pub fn init_global_allocator(size: u64, raw_bytes: *mut u8) {
     }
 }
 
-pub fn init_allocator(allocator: &mut Allocator, size: usize, raw_bytes: *mut u8) {
+fn init_allocator(allocator: &mut Allocator, size: usize, raw_bytes: *mut u8) {
 
     assert!(!raw_bytes.is_null());
 
@@ -65,7 +65,7 @@ pub fn init_allocator(allocator: &mut Allocator, size: usize, raw_bytes: *mut u8
 }
 
 impl Allocator {
-    pub fn free(&mut self, bytes: *mut u8) {
+    fn free(&mut self, bytes: *mut u8) {
 
         let mut region: *mut Region;
 
@@ -88,7 +88,7 @@ impl Allocator {
         self.free_list = Some(region);
     }
 
-    pub fn alloc(&mut self, size: usize) -> *mut u8 {
+    fn alloc(&mut self, size: usize) -> *mut u8 {
 
         let region_offset = mem::size_of::<Region>() as isize;
         let real_size = size + mem::size_of::<Region>();

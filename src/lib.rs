@@ -37,7 +37,7 @@ include!(concat!(env!("OUT_DIR"), "/version.rs"));
 pub extern "C" fn rustyvisor_load(_heap: *mut u8, _heap_size: u64, _: *mut u8, _: u64) -> u32 {
     #[cfg(not(test))]
     {
-        allocator::init_global_allocator(_heap_size, _heap);
+        allocator::init(_heap_size, _heap);
         match serial_logger::init() {
             Ok(()) => {}
             Err(_e) => return 1,
