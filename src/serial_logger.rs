@@ -63,7 +63,7 @@ pub fn init() -> Result<(), log::SetLoggerError> {
         log::set_logger_raw(|max_log_level| {
             static LOGGER: SerialLogger = SerialLogger(());
             LOGGER.init();
-            max_log_level.set(log::LogLevelFilter::Info);
+            max_log_level.set(log::LogLevelFilter::Debug);
             &LOGGER
         })
     }

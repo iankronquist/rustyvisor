@@ -34,7 +34,7 @@ pub mod serial_logger;
 include!(concat!(env!("OUT_DIR"), "/version.rs"));
 
 #[no_mangle]
-pub extern "C" fn entry(_heap: *mut u8, _heap_size: u64, _: *mut u8, _: u64) -> u32 {
+pub extern "C" fn rustyvisor_load(_heap: *mut u8, _heap_size: u64, _: *mut u8, _: u64) -> u32 {
     #[cfg(not(test))]
     {
         allocator::init_global_allocator(_heap_size, _heap);
@@ -50,6 +50,11 @@ pub extern "C" fn entry(_heap: *mut u8, _heap_size: u64, _: *mut u8, _: u64) -> 
     runtime_tests();
 
     0
+}
+
+#[no_mangle]
+pub extern "C" fn rustyvisor_unload() {
+     let _ = serial_logger::shutdown();
 }
 
 #[cfg(feature = "runtime_tests")]
