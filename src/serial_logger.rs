@@ -69,6 +69,6 @@ pub fn init() -> Result<(), log::SetLoggerError> {
     }
 }
 
-pub fn shutdown() -> Result<(), log::ShutdownLoggerError> {
+pub fn fini() -> Result<(), log::ShutdownLoggerError> {
     log::shutdown_logger_raw().map(|_logger| {})
 }
