@@ -52,7 +52,7 @@ impl log::Log for SerialLogger {
 
     fn log(&self, record: &log::LogRecord) {
         if self.enabled(record.metadata()) {
-            let log_message = format!("{}: {}\n\0", record.level(), record.args());
+            let log_message = format!("{}: {}\n", record.level(), record.args());
             self.write_string(log_message);
         }
     }
