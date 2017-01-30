@@ -20,7 +20,7 @@ extern crate log;
 
 mod cli;
 pub mod dispatch_table;
-mod gdt;
+pub mod gdt;
 pub mod hash_map;
 pub mod interrupts;
 mod isr;
