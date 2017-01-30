@@ -18,18 +18,15 @@ extern crate collections;
 #[macro_use]
 extern crate log;
 
-#[macro_use]
-pub mod linux;
-
-pub mod cli;
+mod cli;
 pub mod dispatch_table;
-pub mod gdt;
+mod gdt;
 pub mod hash_map;
 pub mod interrupts;
-pub mod isr;
+mod isr;
 pub mod runtime;
 pub mod vmx;
-pub mod serial_logger;
+mod serial_logger;
 
 include!(concat!(env!("OUT_DIR"), "/version.rs"));
 
