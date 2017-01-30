@@ -2,11 +2,15 @@
 name = "rustyvisor"
 version = "0.1.0"
 authors = ["Ian Kronquist <iankronquist@gmail.com>"]
+build = "build.rs"
 
 
 [dependencies]
-spin = {version = "0.4"}
-allocator = {path = "libs/allocator"}
+spin = { version = "0.4" }
+allocator = { path = "libs/allocator" }
+lazy_static = { features = ["spin_no_std"], version = "0.2" }
+log = { default-features = false, version = "0.3" }
+
 
 [features]
 runtime_tests = []
