@@ -1,11 +1,11 @@
-#![feature(collections)]
+#![no_std]
+#![feature(alloc)]
 #![feature(asm)]
+#![feature(collections)]
 #![feature(const_fn)]
 #![feature(lang_items)]
 
-#![feature(alloc)]
 #![allow(unknown_lints)]
-#![no_std]
 
 extern crate alloc;
 #[cfg(not(test))]
