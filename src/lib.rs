@@ -51,7 +51,7 @@ pub extern "C" fn rustyvisor_load(_heap: *mut u8, _heap_size: u64, _: *mut u8, _
 
 #[no_mangle]
 pub extern "C" fn rustyvisor_unload() {
-     let _ = serial_logger::fini();
+    let _ = serial_logger::fini();
 }
 
 #[cfg(feature = "runtime_tests")]
