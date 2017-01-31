@@ -3,6 +3,7 @@
 #![feature(asm)]
 #![feature(collections)]
 #![feature(const_fn)]
+#![feature(integer_atomics)]
 #![feature(lang_items)]
 
 #![allow(unknown_lints)]
@@ -19,6 +20,7 @@ extern crate collections;
 extern crate log;
 
 mod cli;
+pub mod cpu;
 pub mod dispatch_table;
 pub mod gdt;
 pub mod hash_map;
