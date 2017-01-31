@@ -28,6 +28,7 @@ pub mod interrupts;
 mod isr;
 pub mod runtime;
 pub mod vmx;
+#[cfg(not(test))]
 mod serial_logger;
 
 include!(concat!(env!("OUT_DIR"), "/version.rs"));
@@ -53,7 +54,10 @@ pub extern "C" fn rustyvisor_load(_heap: *mut u8, _heap_size: u64, _: *mut u8, _
 
 #[no_mangle]
 pub extern "C" fn rustyvisor_unload() {
-    let _ = serial_logger::fini();
+    #[cfg(not(test))]
+    {
+        let _ = serial_logger::fini();
+    }
 }
 
 #[cfg(feature = "runtime_tests")]
