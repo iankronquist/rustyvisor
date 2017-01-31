@@ -25,6 +25,13 @@ fn inb(port: u16) -> u8 {
     data
 }
 
+pub fn write_static(s: &'static str) {
+    for c in s.chars() {
+        while (inb(PORT + 5) & 0x20) == 0 {}
+        outb(PORT, c as u8);
+    }
+}
+
 impl SerialLogger {
     fn init(&self) {
         outw(PORT + 1, 0x00);
