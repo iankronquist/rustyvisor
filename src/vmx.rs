@@ -346,51 +346,6 @@ pub fn vmptrst() -> Result<u64, u32> {
     if ret == 0 { Ok(vmcs_phys) } else { Err(ret) }
 }
 
-pub fn lidt(idt_desc: *const CPUTableDescriptor) {
-    unsafe {
-        asm!(
-            "lidt ($0)"
-            :
-            : "r"(idt_desc)
-            :
-            );
-    }
-}
-
-pub fn lgdt(gdt_desc: *const CPUTableDescriptor) {
-    unsafe {
-        asm!(
-            "lgdt ($0)"
-            :
-            : "r"(gdt_desc)
-            :
-            );
-    }
-}
-
-pub fn sgdt(gdt_desc: *mut CPUTableDescriptor) {
-    unsafe {
-        asm!(
-            "sgdt ($0)"
-            :
-            : "r"(gdt_desc)
-            :
-            );
-    }
-}
-
-pub fn sidt(idt_desc: *mut CPUTableDescriptor) {
-    unsafe {
-        asm!(
-            "sidt ($0)"
-            :
-            : "r"(idt_desc)
-            :
-            );
-    }
-}
-
-
 pub fn read_cs() -> u16 {
     let ret: u16;
     unsafe {
