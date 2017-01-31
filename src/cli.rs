@@ -9,7 +9,7 @@ lazy_static! {
 }
 
 
-pub struct ClearLocalInterruptsGuard<T>{
+pub struct ClearLocalInterruptsGuard<T> {
     guarded: T,
 }
 
@@ -41,7 +41,7 @@ impl<T> ops::DerefMut for ClearLocalInterruptsGuard<T> {
 
 impl<T: Default> Default for ClearLocalInterruptsGuard<T> {
     fn default() -> Self {
-        ClearLocalInterruptsGuard{ guarded: Default::default() }
+        ClearLocalInterruptsGuard { guarded: Default::default() }
     }
 }
 
