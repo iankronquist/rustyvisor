@@ -1,19 +1,13 @@
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/string.h>
-#include <linux/tboot.h>
-
-#include <asm/msr.h>
-#include <asm/processor.h>
-#include <asm/tlbflush.h>
-#include <asm/virtext.h>
-
 
 #define MODULE_NAME "RustyVisor"
-#define MB (0x1000 * 0x1000)
-#define HEAP_SIZE (1 * 0x1000)
+#define KB (0x1000)
+#define MB (0x1000 * KB)
+#define HEAP_SIZE (256 * KB)
 
-extern u32 entry(char *heap, u64 heap_size, char *vmx_region, u64 phys_vmx_region);
+extern u32 rustyvisor_load(char *heap, u64 heap_size, char *vmx_region, u64 phys_vmx_region);
+extern u32 rustyvisor_unload(void);
 
 char *vmx_region = NULL;
 char *heap = NULL;
@@ -22,8 +16,7 @@ const size_t vmcs_size = 0x1000;
 const size_t vmx_region_size = 0x1000;
 
 
-
-static int __init hype_init(void) {
+static int __init rustyvisor_init(void) {
 	int err;
 
 	heap = kmalloc(HEAP_SIZE, GFP_KERNEL);
@@ -38,7 +31,7 @@ static int __init hype_init(void) {
 
 	phys_vmx_region = virt_to_phys(vmx_region);
 
-	err = entry(heap, HEAP_SIZE, vmx_region, phys_vmx_region);
+	err = rustyvisor_load(heap, HEAP_SIZE, vmx_region, phys_vmx_region);
 	if (err != 0)
 		return -1;
 
@@ -46,14 +39,15 @@ static int __init hype_init(void) {
 }
 
 
-static void __exit hype_exit(void) {
+static void __exit rustyvisor_exit(void) {
+	rustyvisor_unload();
 	kfree(heap);
 	kfree(vmx_region);
 }
 
 
-module_init(hype_init);
-module_exit(hype_exit);
+module_init(rustyvisor_init);
+module_exit(rustyvisor_exit);
 
 
 MODULE_AUTHOR("Ian Kronquist <iankronquist@gmail.com>");

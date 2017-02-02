@@ -63,12 +63,12 @@ pub fn init() -> Result<(), log::SetLoggerError> {
         log::set_logger_raw(|max_log_level| {
             static LOGGER: SerialLogger = SerialLogger(());
             LOGGER.init();
-            max_log_level.set(log::LogLevelFilter::Info);
+            max_log_level.set(log::LogLevelFilter::Debug);
             &LOGGER
         })
     }
 }
 
-pub fn shutdown() -> Result<(), log::ShutdownLoggerError> {
+pub fn fini() -> Result<(), log::ShutdownLoggerError> {
     log::shutdown_logger_raw().map(|_logger| {})
 }
