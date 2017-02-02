@@ -14,20 +14,36 @@ host operating system will be RustyVisor!
 
 ## Installing dependencies
 
-Depends on nightly Rust, Xargo, GCC, and the Linux module development headers.
-Oh Ubuntu this should be as simple as:
+RustyVisor depends on nightly Rust, Xargo, GCC, and the Linux kernel module
+development headers.
 
+To install the Linux kernel headers and GCC on Ubuntu:
+```
+$ sudo apt-get install linux-headers-$(uname -r) gcc
+```
+
+On Fedora you can use:
+```
+$ sudo dnf install kernel-devel-$(uname -r) gcc
+```
+
+And for Arch Linux:
+```
+$ sudo pacman -S linux-headers gcc
+```
+
+Next install the nightly rust toolchain:
 ```
 $ # Bootstrap rustup to get a nightly build of Rust.
 $ curl https://sh.rustup.rs -sSf | sh
 $ source ~/.cargo/env
 $ rustup install nightly
 $ rustup default nightly
-$ # Install development headers & GCC
-$ sudo apt-get install linux-headers-$(uname -r) gcc
-$ # The cross compilation tool Xargo needs the rust source code
+```
+
+To build Rust code for kernel context we use the cross compilation tool Xargo:
+```
 $ rustup component add rust-src
-$ # Install Xargo
 $ cargo install xargo
 ```
 
