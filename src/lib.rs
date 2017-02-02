@@ -35,16 +35,23 @@ include!(concat!(env!("OUT_DIR"), "/version.rs"));
 
 #[no_mangle]
 pub extern "C" fn rustyvisor_load(_heap: *mut u8, _heap_size: u64, _: *mut u8, _: u64) -> u32 {
-    #[cfg(not(test))]
-    {
-        allocator::init(_heap_size, _heap);
-        match serial_logger::init() {
-            Ok(()) => {}
-            Err(_e) => return 1,
+
+    cpu::init(1);
+    cpu::bring_core_online();
+
+    if cpu::get_number() == 0 {
+        #[cfg(not(test))]
+        {
+            allocator::init(_heap_size, _heap);
+            match serial_logger::init() {
+                Ok(()) => {}
+                Err(_e) => return 1,
+            }
         }
+
+        info!("{}", VERSION);
     }
 
-    info!("{}", VERSION);
 
     #[cfg(feature = "runtime_tests")]
     runtime_tests();
