@@ -1,5 +1,5 @@
-use vmx;
 use core::mem;
+use cli;
 
 #[repr(packed)]
 #[allow(dead_code)]
@@ -14,7 +14,27 @@ struct GDTEntry {
     reserved0: u32,
 }
 
+pub fn lgdt(gdt_desc: *const GDTDescriptor) {
+    unsafe {
+        asm!(
+            "lgdt ($0)"
+            :
+            : "r"(gdt_desc)
+            :
+            );
+    }
+}
 
+pub fn sgdt(gdt_desc: *mut GDTDescriptor) {
+    unsafe {
+        asm!(
+            "sgdt ($0)"
+            :
+            : "r"(gdt_desc)
+            :
+            );
+    }
+}
 
 const GDT: [GDTEntry; 3] = [GDTEntry {
                                 limit_low: 0,
@@ -47,30 +67,47 @@ const GDT: [GDTEntry; 3] = [GDTEntry {
                                 reserved0: 0,
                             }];
 
-pub fn new_host_descriptor() -> vmx::CPUTableDescriptor {
-    vmx::CPUTableDescriptor {
-        limit: (mem::size_of::<[GDTEntry; 3]>() - 1) as u16,
-        base: GDT.as_ptr() as u64,
+#[derive(Default)]
+#[repr(packed)]
+pub struct GDTDescriptor {
+    pub limit: u16,
+    pub base: u64,
+}
+
+impl GDTDescriptor {
+    pub fn new() -> cli::ClearLocalInterruptsGuard<GDTDescriptor> {
+        cli::ClearLocalInterruptsGuard::new(GDTDescriptor {
+            limit: (mem::size_of::<[GDTEntry; 3]>() - 1) as u16,
+            base: GDT.as_ptr() as u64,
+        })
+    }
+
+    pub fn from_cpu() -> cli::ClearLocalInterruptsGuard<GDTDescriptor> {
+        let mut current_gdt_ptr: GDTDescriptor = Default::default();
+        sgdt(&mut current_gdt_ptr);
+        cli::ClearLocalInterruptsGuard::new(current_gdt_ptr)
+    }
+
+    pub fn load(&self) {
+        lgdt(self);
     }
 }
 
 #[cfg(feature = "runtime_tests")]
 pub mod runtime_tests {
 
-    use cli;
-    use vmx;
-    use super::new_host_descriptor;
+    use super::GDTDescriptor;
 
     pub fn run() {
+        info!("Executing GDT tests...");
         test_load_and_restore_gdt();
+        info!("GDT tests succeeded");
     }
 
     fn test_load_and_restore_gdt() {
-        cli::ClearLocalInterruptsGuard::new();
-        let gdt_desc = new_host_descriptor();
-        let mut orig_gdt_desc: vmx::CPUTableDescriptor = Default::default();
-        vmx::sgdt(&mut orig_gdt_desc);
-        vmx::lgdt(&gdt_desc);
-        vmx::lgdt(&orig_gdt_desc);
+        let orig_gdt_desc = GDTDescriptor::from_cpu();
+        let gdt_desc = GDTDescriptor::new();
+        gdt_desc.load();
+        orig_gdt_desc.load();
     }
 }

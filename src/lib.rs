@@ -3,6 +3,7 @@
 #![feature(asm)]
 #![feature(collections)]
 #![feature(const_fn)]
+#![feature(integer_atomics)]
 #![feature(lang_items)]
 
 #![allow(unknown_lints)]
@@ -19,6 +20,7 @@ extern crate collections;
 extern crate log;
 
 mod cli;
+pub mod cpu;
 pub mod dispatch_table;
 pub mod gdt;
 pub mod hash_map;
@@ -26,22 +28,30 @@ pub mod interrupts;
 mod isr;
 pub mod runtime;
 pub mod vmx;
+#[cfg(not(test))]
 mod serial_logger;
 
 include!(concat!(env!("OUT_DIR"), "/version.rs"));
 
 #[no_mangle]
 pub extern "C" fn rustyvisor_load(_heap: *mut u8, _heap_size: u64, _: *mut u8, _: u64) -> u32 {
-    #[cfg(not(test))]
-    {
-        allocator::init(_heap_size, _heap);
-        match serial_logger::init() {
-            Ok(()) => {}
-            Err(_e) => return 1,
+
+    cpu::init(1);
+    cpu::bring_core_online();
+
+    if cpu::get_number() == 0 {
+        #[cfg(not(test))]
+        {
+            allocator::init(_heap_size, _heap);
+            match serial_logger::init() {
+                Ok(()) => {}
+                Err(_e) => return 1,
+            }
         }
+
+        info!("{}", VERSION);
     }
 
-    info!("{}", VERSION);
 
     #[cfg(feature = "runtime_tests")]
     runtime_tests();
@@ -51,7 +61,10 @@ pub extern "C" fn rustyvisor_load(_heap: *mut u8, _heap_size: u64, _: *mut u8, _
 
 #[no_mangle]
 pub extern "C" fn rustyvisor_unload() {
-    let _ = serial_logger::fini();
+    #[cfg(not(test))]
+    {
+        let _ = serial_logger::fini();
+    }
 }
 
 #[cfg(feature = "runtime_tests")]
