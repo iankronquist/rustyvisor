@@ -99,7 +99,9 @@ pub mod runtime_tests {
     use super::GDTDescriptor;
 
     pub fn run() {
+        info!("Executing GDT tests...");
         test_load_and_restore_gdt();
+        info!("GDT tests succeeded");
     }
 
     fn test_load_and_restore_gdt() {

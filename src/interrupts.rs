@@ -180,7 +180,9 @@ pub mod runtime_tests {
     use interrupts::IDTDescriptor;
 
     pub fn run() {
+        info!("Executing interrupt tests...");
         test_load_and_restore_idt();
+        info!("Interrupt tests succeeded");
     }
 
     fn test_load_and_restore_idt() {
