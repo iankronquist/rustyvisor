@@ -4,6 +4,7 @@
 // don't take this as an example for anything ever.
 
 #![feature(allocator)]
+#![feature(asm)]
 #![feature(const_fn)]
 
 #![allocator]
@@ -11,15 +12,19 @@
 #![allow(unknown_lints)]
 #![no_std]
 
+use core::fmt::{Write};
 use core::ptr;
 use core::mem;
 
+extern crate spin;
+
 use self::spin::Mutex;
 
-extern crate spin;
+pub mod serial_logger_lite;
 
 const SPLIT_FUDGE_FACTOR: usize = 32;
 
+#[derive(Debug)]
 #[repr(C)]
 struct Region {
     size: usize,
@@ -64,6 +69,20 @@ pub fn init_allocator(allocator: &mut Allocator, size: usize, raw_bytes: *mut u8
     allocator.free_list = Some(raw_bytes as *mut Region);
 }
 
+// Serial logger & allocator must be initialized before calling this function.
+pub fn debug_allocator() {
+    unsafe {
+        let allocator = ALLOCATOR.lock();
+        let mut current_region = allocator.free_list;
+        let mut s: serial_logger_lite::SerialLogger = Default::default();
+
+        while let Some(region) = current_region {
+            let _ = write!(&mut s, "Region {:?} {:?}\n", region, region);
+            current_region = (*region).next;
+        }
+    }
+}
+
 impl Allocator {
     pub fn free(&mut self, bytes: *mut u8) {
 
@@ -106,6 +125,7 @@ impl Allocator {
                             (region as *mut u8)
                                 .offset((size as isize) +
                                         region_offset) as *mut Region;
+                        (*region).size -= size + region_offset as usize;
                         new_next = Some(split_region);
                         new_prev = Some(split_region);
                     } else {

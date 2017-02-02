@@ -28,5 +28,10 @@ pub extern "C" fn _Unwind_Resume() {}
 #[lang = "panic_fmt"]
 #[no_mangle]
 pub extern "C" fn panic_fmt() -> ! {
-    loop {}
+    loop {
+        unsafe {
+            // If we're going to hang the CPU, do it properly.
+            asm!("cli; hlt;");
+        }
+    }
 }
