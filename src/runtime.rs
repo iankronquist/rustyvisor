@@ -1,8 +1,11 @@
 #![cfg(not(test))]
 
 use core::fmt;
+use core::fmt::{Write};
 
+use serial_logger;
 use serial_logger::write_static;
+
 
 #[lang = "eh_personality"]
 #[no_mangle]
@@ -51,9 +54,14 @@ pub extern "C" fn _Unwind_Resume() {
 #[allow(empty_loop)]
 #[lang = "panic_fmt"]
 #[no_mangle]
-pub extern "C" fn panic_fmt(_fmt: fmt::Arguments, _file_line: &(&'static str, u32)) -> ! {
+pub extern "C" fn panic_fmt(fmt: fmt::Arguments, file_line: &(&'static str, u32)) -> ! {
 
-    write_static("PANIC: panic_fmt\n");
+    write_static("PANIC: \n");
+    let mut logger: serial_logger::SerialLogger = Default::default();
+    let _ = write!(logger, "{}\n", fmt);
+    let _ = write!(logger, "Line: {}\nFile: ", file_line.1);
+    write_static(file_line.0);
+    let _ = write!(logger, "\n");
 
     loop {
         unsafe {

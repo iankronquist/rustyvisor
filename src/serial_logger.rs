@@ -1,9 +1,11 @@
 use log;
+use core::fmt;
 use collections::String;
 
 const PORT: u16 = 0x3f8;
 
-struct SerialLogger(());
+#[derive(Default)]
+pub struct SerialLogger(());
 
 fn outw(port: u16, data: u16) {
     unsafe {
@@ -23,6 +25,16 @@ fn inb(port: u16) -> u8 {
         asm!("inb %dx, %al" : "={al}"(data) : "{dx}"(port as u16));
     }
     data
+}
+
+impl fmt::Write for SerialLogger {
+    fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
+        for c in s.chars() {
+            while (inb(PORT + 5) & 0x20) == 0 {}
+            outb(PORT, c as u8);
+        }
+        Ok(())
+    }
 }
 
 pub fn write_static(s: &'static str) {
