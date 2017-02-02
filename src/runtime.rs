@@ -1,7 +1,7 @@
 #![cfg(not(test))]
 
 use core::fmt;
-use core::fmt::{Write};
+use core::fmt::Write;
 
 use serial_logger;
 use serial_logger::write_static;

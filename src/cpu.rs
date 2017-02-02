@@ -9,7 +9,7 @@ static CPU_ASSIGNMENT: AtomicU16 = ATOMIC_U16_INIT;
 
 
 pub fn init(count: u16) {
-    CPU_COUNT.call_once(||{ count });
+    CPU_COUNT.call_once(|| count);
 }
 
 fn get_cpu_count() -> u16 {
