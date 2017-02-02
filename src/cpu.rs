@@ -1,14 +1,15 @@
 use vmx;
 use collections::vec::Vec;
 use core::sync::atomic::{ATOMIC_U16_INIT, AtomicU16, Ordering};
+use spin;
 
 
-static CPU_COUNT: AtomicU16 = ATOMIC_U16_INIT;
+static CPU_COUNT: spin::Once<u16> = spin::Once::new();
 static CPU_ASSIGNMENT: AtomicU16 = ATOMIC_U16_INIT;
 
 
 pub fn init(count: u16) {
-    CPU_COUNT.store(count, Ordering::Relaxed);
+    CPU_COUNT.call_once(||{ count });
 }
 
 
