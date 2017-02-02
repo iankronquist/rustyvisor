@@ -6,4 +6,3 @@ authors = ["Ian Kronquist <iankronquist@gmail.com>"]
 
 [dependencies]
 spin = {version = "0.4"}
-log = { default-features = false, version = "0.3" }
