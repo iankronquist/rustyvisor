@@ -128,6 +128,7 @@ impl Allocator {
                             (region as *mut u8)
                                 .offset((size as isize) +
                                         region_offset) as *mut Region;
+                        (*region).size -= size + region_offset as usize;
                         new_next = Some(split_region);
                         new_prev = Some(split_region);
                     } else {
