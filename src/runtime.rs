@@ -55,5 +55,10 @@ pub extern "C" fn panic_fmt(_fmt: fmt::Arguments, _file_line: &(&'static str, u3
 
     write_static("PANIC: panic_fmt\n");
 
-    loop {}
+    loop {
+        unsafe {
+            // If we're going to hang the CPU, do it properly.
+            asm!("cli; hlt;");
+        }
+    }
 }
