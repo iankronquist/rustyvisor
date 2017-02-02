@@ -385,6 +385,19 @@ pub fn read_ds() -> u16 {
     ret
 }
 
+pub fn read_es() -> u16 {
+    let ret: u16;
+    unsafe {
+        asm!(
+            "mov %es, $0"
+            : "=r"(ret)
+            :
+            :
+            );
+    }
+    ret
+}
+
 pub fn read_fs() -> u16 {
     let ret: u16;
     unsafe {

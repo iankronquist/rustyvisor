@@ -20,12 +20,12 @@ pub fn bring_core_online() {
 
 
 fn set_number(num: u16) {
-    vmx::write_gs(num);
+    vmx::write_es(num);
 }
 
 
 pub fn get_number() -> u16 {
-    vmx::read_gs()
+    vmx::read_es()
 }
 
 
