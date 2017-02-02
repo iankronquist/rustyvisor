@@ -20,9 +20,6 @@ extern crate spin;
 
 use self::spin::Mutex;
 
-#[macro_use]
-extern crate log;
-
 pub mod serial_logger_lite;
 
 const SPLIT_FUDGE_FACTOR: usize = 32;
