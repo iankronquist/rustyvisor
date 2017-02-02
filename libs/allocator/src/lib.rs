@@ -80,7 +80,7 @@ pub fn debug_allocator() {
         let mut s: serial_logger_lite::SerialLogger = Default::default();
 
         while let Some(region) = current_region {
-            let _ = write!(&mut s, "Region {:?} {:?}", region, region);
+            let _ = write!(&mut s, "Region {:?} {:?}\n", region, region);
             current_region = (*region).next;
         }
     }
