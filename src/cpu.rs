@@ -12,6 +12,12 @@ pub fn init(count: u16) {
     CPU_COUNT.call_once(||{ count });
 }
 
+fn get_cpu_count() -> u16 {
+    *CPU_COUNT.call_once(|| {
+        panic!("Must initialize CPU count before requesting it");
+    })
+}
+
 
 pub fn bring_core_online() {
     let cpu_num = CPU_ASSIGNMENT.fetch_add(1, Ordering::Relaxed);
@@ -29,14 +35,31 @@ pub fn get_number() -> u16 {
 }
 
 
-#[derive(Default)]
 pub struct PerCoreVariable<T> {
     vars: Vec<T>,
+}
+
+
+impl<T: Default> Default for PerCoreVariable<T> {
+    fn default() -> Self {
+        let mut vars = vec![];
+        for _ in 0..get_cpu_count() {
+            vars.push(Default::default());
+        }
+        PerCoreVariable { vars: vars }
+    }
 }
 
 
 impl<T> PerCoreVariable<T> {
     pub fn get(&self) -> &T {
         &self.vars[get_number() as usize]
+    }
+}
+
+
+impl<T: Clone> PerCoreVariable<T> {
+    pub fn new(item: T) -> Self {
+        PerCoreVariable { vars: vec![item; get_cpu_count() as usize] }
     }
 }
