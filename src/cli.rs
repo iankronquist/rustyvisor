@@ -37,7 +37,10 @@ pub struct ClearLocalInterruptsGuard<T> {
 
 impl<T> ClearLocalInterruptsGuard<T> {
     pub fn new(guarded: T) -> Self {
-        ClearLocalInterruptsGuard { guarded: guarded, count: ATOMIC_USIZE_INIT }
+        ClearLocalInterruptsGuard {
+            guarded: guarded,
+            count: ATOMIC_USIZE_INIT,
+        }
     }
 }
 
@@ -67,8 +70,9 @@ impl<T> ops::DerefMut for ClearLocalInterruptsGuard<T> {
 
 impl<T> Drop for ClearLocalInterruptsGuard<T> {
     fn drop(&mut self) {
-        if self.count.fetch_sub(1, Ordering::AcqRel) == 1 && CLI_COUNT.get().fetch_sub(1, Ordering::AcqRel) == 1 {
-                sti();
+        if self.count.fetch_sub(1, Ordering::AcqRel) == 1 &&
+           CLI_COUNT.get().fetch_sub(1, Ordering::AcqRel) == 1 {
+            sti();
         }
     }
 }
