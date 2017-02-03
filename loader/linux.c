@@ -9,6 +9,9 @@
 extern u32 rustyvisor_load(char *heap, u64 heap_size, char *vmx_region, u64 phys_vmx_region);
 extern u32 rustyvisor_unload(void);
 
+extern u32 __module_start;
+extern u32 __module_end;
+
 char *vmx_region = NULL;
 char *heap = NULL;
 phys_addr_t phys_vmx_region;
