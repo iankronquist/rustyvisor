@@ -1,18 +1,3 @@
-#[repr(packed)]
-pub struct CPUTableDescriptor {
-    pub limit: u16,
-    pub base: u64,
-}
-
-impl Default for CPUTableDescriptor {
-    fn default() -> Self {
-        CPUTableDescriptor {
-            limit: 0,
-            base: 0,
-        }
-    }
-}
-
 #[repr(u32)]
 pub enum MSR {
     EFER = 0xc0000080,
@@ -586,14 +571,16 @@ pub fn read_db7() -> u64 {
     ret
 }
 
-pub fn cli() {
-    unsafe {
-        asm!("cli" : : :);
-    }
-}
 
-pub fn sti() {
+pub fn read_flags() -> u64 {
+    let ret: u64;
     unsafe {
-        asm!("sti" : : :);
+        asm!(
+            "pushf; pop $0"
+            : "=r"(ret)
+            :
+            : "memory"
+            );
     }
+    ret
 }
