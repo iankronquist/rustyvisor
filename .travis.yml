@@ -24,4 +24,6 @@ script:
   - cargo clippy -- -D clippy || true
   - cargo fmt -- --write-mode diff
   - sudo insmod rustyvisor.ko
+  - dmesg | tail -100
   - sudo rmmod rustyvisor.ko
+  - dmesg | tail -100
