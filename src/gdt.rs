@@ -96,11 +96,13 @@ impl GDTDescriptor {
 #[cfg(feature = "runtime_tests")]
 pub mod runtime_tests {
 
+    use cli;
     use super::GDTDescriptor;
 
     pub fn run() {
         info!("Executing GDT tests...");
         test_load_and_restore_gdt();
+        assert!(cli::are_interrupts_enabled());
         info!("GDT tests succeeded");
     }
 

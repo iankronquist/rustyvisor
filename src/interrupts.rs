@@ -177,11 +177,13 @@ impl IDTDescriptor {
 #[cfg(feature = "runtime_tests")]
 pub mod runtime_tests {
 
+    use cli;
     use interrupts::IDTDescriptor;
 
     pub fn run() {
         info!("Executing interrupt tests...");
         test_load_and_restore_idt();
+        assert!(cli::are_interrupts_enabled());
         info!("Interrupt tests succeeded");
     }
 
