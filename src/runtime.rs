@@ -59,13 +59,9 @@ pub extern "C" fn panic_fmt(fmt: fmt::Arguments, file_line: &(&'static str, u32)
     write_static("PANIC: \n");
     let mut logger: serial_logger::SerialLogger = Default::default();
     let _ = write!(logger, "{}\n", fmt);
-    let _ = write!(logger, "Line: {}\nFile: ", file_line.1);
-    write_static(file_line.0);
-    let _ = write!(logger, "\n");
 
     loop {
         unsafe {
-            // If we're going to hang the CPU, do it properly.
             asm!("cli; hlt;");
         }
     }
