@@ -5,6 +5,7 @@
 #![feature(const_fn)]
 #![feature(integer_atomics)]
 #![feature(lang_items)]
+#![feature(unique)]
 
 #![allow(unknown_lints)]
 
@@ -25,6 +26,7 @@ mod dispatch_table;
 pub mod hash_map;
 pub mod interrupts;
 mod isr;
+pub mod paging;
 pub mod runtime;
 pub mod segmentation;
 pub mod vmx;
