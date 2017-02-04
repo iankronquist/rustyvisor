@@ -73,6 +73,7 @@ fn runtime_tests() {
     info!("Executing runtime tests...");
 
     cli::runtime_tests::run();
+    cpu::runtime_tests::run();
     segmentation::runtime_tests::run();
     interrupts::runtime_tests::run();
 
