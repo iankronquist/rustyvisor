@@ -15,7 +15,6 @@ pub fn are_interrupts_enabled() -> bool {
 
 #[cfg(not(test))]
 pub fn cli() {
-    info!("Clearing interrupts!");
     unsafe {
         asm!("cli" : : :);
     }
@@ -28,7 +27,6 @@ pub fn cli() { }
 
 #[cfg(not(test))]
 pub fn sti() {
-    info!("Restoring interrupts!");
     unsafe {
         asm!("sti" : : :);
     }
@@ -66,13 +64,11 @@ impl<T> ClearLocalInterrupts<T> {
     }
 
     pub fn cli_mut(&mut self) -> ClearLocalInterruptsGuardMut<T> {
-        info!("new mut!");
         ClearLocalInterruptsGuardMut { guarded: &mut self.guarded, acquired: ATOMIC_BOOL_INIT }
     }
 
 
     pub fn cli(&self) -> ClearLocalInterruptsGuard<T> {
-        info!("new!");
         ClearLocalInterruptsGuard { guarded: &self.guarded, acquired: ATOMIC_BOOL_INIT }
     }
 }
@@ -118,7 +114,6 @@ impl<'a, T> ops::DerefMut for ClearLocalInterruptsGuardMut<'a, T> {
 
 impl<'a, T> Drop for ClearLocalInterruptsGuard<'a, T> {
     fn drop(&mut self) {
-        info!("Drop! {}", CLI_COUNT.get().load(Ordering::Relaxed));
         if CLI_COUNT.get().fetch_sub(1, Ordering::AcqRel) == 1 {
             sti();
         }
@@ -128,7 +123,6 @@ impl<'a, T> Drop for ClearLocalInterruptsGuard<'a, T> {
 
 impl<'a, T> Drop for ClearLocalInterruptsGuardMut<'a, T> {
     fn drop(&mut self) {
-        info!("Drop! {}", CLI_COUNT.get().load(Ordering::Relaxed));
         if CLI_COUNT.get().fetch_sub(1, Ordering::AcqRel) == 1 {
             sti();
         }
