@@ -55,11 +55,67 @@ impl<T> PerCoreVariable<T> {
     pub fn get(&self) -> &T {
         &self.vars[get_number() as usize]
     }
+
+    pub fn get_mut(&mut self) -> &mut T {
+        &mut self.vars[get_number() as usize]
+    }
+
 }
 
 
 impl<T: Clone> PerCoreVariable<T> {
     pub fn new(item: T) -> Self {
         PerCoreVariable { vars: vec![item; get_cpu_count() as usize] }
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+
+    #[test]
+    fn test_new() {
+        init(4);
+        let pcv: PerCoreVariable<u32> = PerCoreVariable::new(42);
+        assert_eq!(pcv.vars.len(), 4);
+        for variable in &pcv.vars {
+            assert_eq!(*variable, 42);
+        }
+    }
+
+
+    #[test]
+    fn test_default() {
+        init(4);
+        let pcv: PerCoreVariable<u32> = Default::default();
+        let def: u32 = Default::default();
+        assert_eq!(pcv.vars.len(), 4);
+        for variable in &pcv.vars {
+            assert_eq!(*variable, def);
+        }
+    }
+
+    #[test]
+    fn test_get_mut() {
+        init(4);
+        let mut pcv: PerCoreVariable<u32> = Default::default();
+        assert_eq!(*pcv.get(), 0);
+        {
+            let mut b = pcv.get_mut();
+            *b = 42;
+        }
+        assert_eq!(*pcv.get(), 42);
+    }
+
+
+    #[test]
+    fn test_get() {
+        init(4);
+        let mut pcv: PerCoreVariable<u32> = Default::default();
+        assert_eq!(*pcv.get(), 0);
+        pcv.vars[0] = 42;
+        assert_eq!(*pcv.get(), 42);
     }
 }
