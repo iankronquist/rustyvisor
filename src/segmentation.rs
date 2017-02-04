@@ -74,18 +74,18 @@ pub struct GDTDescriptor {
     pub base: u64,
 }
 
-impl GDTDescriptor {
-    pub fn new() -> cli::ClearLocalInterruptsGuard<GDTDescriptor> {
-        cli::ClearLocalInterruptsGuard::new(GDTDescriptor {
+impl<'a> GDTDescriptor {
+    pub fn new() -> cli::ClearLocalInterrupts<GDTDescriptor> {
+        cli::ClearLocalInterrupts::new(GDTDescriptor {
             limit: (mem::size_of::<[GDTEntry; 3]>() - 1) as u16,
             base: GDT.as_ptr() as u64,
         })
     }
 
-    pub fn from_cpu() -> cli::ClearLocalInterruptsGuard<GDTDescriptor> {
+    pub fn from_cpu() -> cli::ClearLocalInterrupts<GDTDescriptor> {
         let mut current_gdt_ptr: GDTDescriptor = Default::default();
         sgdt(&mut current_gdt_ptr);
-        cli::ClearLocalInterruptsGuard::new(current_gdt_ptr)
+        cli::ClearLocalInterrupts::new(current_gdt_ptr)
     }
 
     pub fn load(&self) {
@@ -109,7 +109,7 @@ pub mod runtime_tests {
     fn test_load_and_restore_gdt() {
         let orig_gdt_desc = GDTDescriptor::from_cpu();
         let gdt_desc = GDTDescriptor::new();
-        gdt_desc.load();
-        orig_gdt_desc.load();
+        gdt_desc.cli().load();
+        orig_gdt_desc.cli().load();
     }
 }
