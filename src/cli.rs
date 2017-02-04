@@ -82,7 +82,7 @@ impl<'a, T> ops::Deref for ClearLocalInterruptsGuard<'a, T> {
     type Target = T;
     fn deref(&self) -> &T {
         if !self.acquired.compare_and_swap(false, true, Ordering::AcqRel) &&
-            CLI_COUNT.get().fetch_add(1, Ordering::AcqRel) == 0 {
+           CLI_COUNT.get().fetch_add(1, Ordering::AcqRel) == 0 {
             cli();
         }
         self.guarded
@@ -94,7 +94,7 @@ impl<'a, T> ops::Deref for ClearLocalInterruptsGuardMut<'a, T> {
     type Target = T;
     fn deref(&self) -> &T {
         if !self.acquired.compare_and_swap(false, true, Ordering::AcqRel) &&
-            CLI_COUNT.get().fetch_add(1, Ordering::AcqRel) == 0 {
+           CLI_COUNT.get().fetch_add(1, Ordering::AcqRel) == 0 {
             cli();
         }
         self.guarded
@@ -105,7 +105,7 @@ impl<'a, T> ops::Deref for ClearLocalInterruptsGuardMut<'a, T> {
 impl<'a, T> ops::DerefMut for ClearLocalInterruptsGuardMut<'a, T> {
     fn deref_mut(&mut self) -> &mut T {
         if !self.acquired.compare_and_swap(false, true, Ordering::AcqRel) &&
-            CLI_COUNT.get().fetch_add(1, Ordering::AcqRel) == 0 {
+           CLI_COUNT.get().fetch_add(1, Ordering::AcqRel) == 0 {
             cli();
         }
         self.guarded
