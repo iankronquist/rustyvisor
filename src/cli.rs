@@ -22,7 +22,7 @@ pub fn cli() {
 
 
 #[cfg(test)]
-pub fn cli() { }
+pub fn cli() {}
 
 
 #[cfg(not(test))]
@@ -34,7 +34,7 @@ pub fn sti() {
 
 
 #[cfg(test)]
-pub fn sti() { }
+pub fn sti() {}
 
 
 #[derive(Default)]
@@ -58,18 +58,22 @@ pub struct ClearLocalInterruptsGuardMut<'a, T: 'a> {
 
 impl<T> ClearLocalInterrupts<T> {
     pub fn new(guarded: T) -> Self {
-        ClearLocalInterrupts {
-            guarded: guarded,
-        }
+        ClearLocalInterrupts { guarded: guarded }
     }
 
     pub fn cli_mut(&mut self) -> ClearLocalInterruptsGuardMut<T> {
-        ClearLocalInterruptsGuardMut { guarded: &mut self.guarded, acquired: ATOMIC_BOOL_INIT }
+        ClearLocalInterruptsGuardMut {
+            guarded: &mut self.guarded,
+            acquired: ATOMIC_BOOL_INIT,
+        }
     }
 
 
     pub fn cli(&self) -> ClearLocalInterruptsGuard<T> {
-        ClearLocalInterruptsGuard { guarded: &self.guarded, acquired: ATOMIC_BOOL_INIT }
+        ClearLocalInterruptsGuard {
+            guarded: &self.guarded,
+            acquired: ATOMIC_BOOL_INIT,
+        }
     }
 }
 
@@ -140,7 +144,8 @@ pub mod runtime_tests {
     }
 
     lazy_static! {
-        static ref STATIC_GUARDEE: ClearLocalInterrupts<Guardee> = ClearLocalInterrupts::new(Guardee { data: 0 });
+        static ref STATIC_GUARDEE: ClearLocalInterrupts<Guardee> =
+            ClearLocalInterrupts::new(Guardee { data: 0 });
     }
 
     impl Guardee {
@@ -159,7 +164,8 @@ pub mod runtime_tests {
     fn test_clear_local_interrupts_guard_mut_borrow() {
         assert!(are_interrupts_enabled());
         {
-            let mut g: ClearLocalInterrupts<Guardee> = ClearLocalInterrupts::new(Guardee { data: 0 });
+            let mut g: ClearLocalInterrupts<Guardee> =
+                ClearLocalInterrupts::new(Guardee { data: 0 });
             assert!(are_interrupts_enabled());
             g.cli_mut().data += 1;
             assert!(are_interrupts_enabled());

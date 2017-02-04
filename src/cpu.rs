@@ -59,7 +59,6 @@ impl<T> PerCoreVariable<T> {
     pub fn get_mut(&mut self) -> &mut T {
         &mut self.vars[get_number() as usize]
     }
-
 }
 
 
@@ -121,7 +120,7 @@ mod tests {
 
     #[test]
     fn test_atomic() {
-        use core::sync::atomic::{AtomicUsize};
+        use core::sync::atomic::AtomicUsize;
         init(4);
         let mut pcv: PerCoreVariable<AtomicUsize> = Default::default();
         assert_eq!(pcv.get().load(Ordering::Relaxed), 0);
@@ -145,7 +144,7 @@ pub mod runtime_tests {
     }
 
     fn test_atomic() {
-        use core::sync::atomic::{AtomicUsize};
+        use core::sync::atomic::AtomicUsize;
         init(1);
         let mut pcv: PerCoreVariable<AtomicUsize> = Default::default();
         assert_eq!(pcv.get().load(Ordering::Relaxed), 0);

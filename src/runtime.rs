@@ -54,7 +54,7 @@ pub extern "C" fn _Unwind_Resume() {
 #[allow(empty_loop)]
 #[lang = "panic_fmt"]
 #[no_mangle]
-pub extern "C" fn panic_fmt(fmt: fmt::Arguments,  file: &'static str, line: u32) -> ! {
+pub extern "C" fn panic_fmt(fmt: fmt::Arguments, file: &'static str, line: u32) -> ! {
 
     write_static("PANIC: \n");
     let mut logger: serial_logger::SerialLogger = Default::default();
