@@ -14,16 +14,16 @@ const TABLE_ENTRY_COUNT: usize = 512;
 const UNUSED_ENTRY: u64 = 0xcccccccc;
 
 
-pub const PAGE_PRESENT: u64             = 1 << 0;
-pub const PAGE_WRITABLE: u64            = 1 << 1;
-pub const PAGE_USER_ACCESSIBLE: u64     = 1 << 2;
+pub const PAGE_PRESENT: u64 = 1 << 0;
+pub const PAGE_WRITABLE: u64 = 1 << 1;
+pub const PAGE_USER_ACCESSIBLE: u64 = 1 << 2;
 pub const PAGE_CACHE_WRITE_THROUGH: u64 = 1 << 3;
-pub const PAGE_NO_CACHE: u64            = 1 << 4;
-pub const PAGE_ACCESSED: u64            = 1 << 5;
-pub const PAGE_DIRTY: u64               = 1 << 6;
-pub const PAGE_HUGE: u64                = 1 << 7;
-pub const PAGE_GLOBAL: u64              = 1 << 8;
-pub const PAGE_NO_EXECUTE: u64          = 1 << 63;
+pub const PAGE_NO_CACHE: u64 = 1 << 4;
+pub const PAGE_ACCESSED: u64 = 1 << 5;
+pub const PAGE_DIRTY: u64 = 1 << 6;
+pub const PAGE_HUGE: u64 = 1 << 7;
+pub const PAGE_GLOBAL: u64 = 1 << 8;
+pub const PAGE_NO_EXECUTE: u64 = 1 << 63;
 
 pub trait PageTableLevel {}
 
@@ -66,11 +66,11 @@ impl PageTableEntry {
     }
 
     pub fn set_absent(&mut self) {
-        self.0  = UNUSED_ENTRY;
+        self.0 = UNUSED_ENTRY;
     }
 
     pub fn set(&mut self, flags: u64) {
-        self.0  = flags;
+        self.0 = flags;
     }
 
     fn physical_address(&self) -> Option<PhysicalAddress> {
@@ -83,7 +83,6 @@ impl PageTableEntry {
 }
 
 impl VirtualAddress {
-
     fn p4_index(&self) -> usize {
         ((self.0 >> 27) & 0o777) as usize
     }
@@ -116,7 +115,7 @@ impl<L: PageTableLevel> Default for PageTable<L> {
     fn default() -> Self {
         PageTable {
             entries: [Default::default(); TABLE_ENTRY_COUNT],
-            level: PhantomData
+            level: PhantomData,
         }
     }
 }
@@ -124,13 +123,15 @@ impl<L: PageTableLevel> Default for PageTable<L> {
 
 impl PageTable<Level4> {
     pub unsafe fn load(&self) {
-        let pa = virt_to_phys(VirtualAddress(self.entries.as_ptr() as u64)).expect("Fractal paging not working");
+        let pa = virt_to_phys(VirtualAddress(self.entries.as_ptr() as u64))
+            .expect("Fractal paging not working");
         self.load_physical(pa);
     }
 
 
     pub fn set_fractal(&mut self) {
-        let pa = virt_to_phys(VirtualAddress(self.entries.as_ptr() as u64)).expect("Page table unmapped?");
+        let pa = virt_to_phys(VirtualAddress(self.entries.as_ptr() as u64))
+            .expect("Page table unmapped?");
         self.entries[TABLE_ENTRY_COUNT - 1].set(pa.0);
     }
 
@@ -169,7 +170,6 @@ lazy_static! {
 }
 
 impl ActivePageTable {
-
     pub fn p4(&self) -> &PageTable<Level4> {
         unsafe { self.p4.get() }
     }
@@ -189,7 +189,6 @@ impl<L: PageTableLevel> Index<usize> for PageTable<L> {
 
 
 impl<L: PageTableLevel> IndexMut<usize> for PageTable<L> {
-
     fn index_mut(&mut self, index: usize) -> &mut PageTableEntry {
         &mut self.entries[index]
     }
@@ -226,8 +225,7 @@ impl<L: HierarchicalLevel> PageTable<L> {
             .map(|address| unsafe { &mut *(address as *mut _) })
     }
 
-    pub fn next_layer_create(&mut self, index: usize) -> Option<&mut PageTable<L::NextLevel>>
-    {
+    pub fn next_layer_create(&mut self, index: usize) -> Option<&mut PageTable<L::NextLevel>> {
         if self.next_layer(index).is_none() {
             assert!((self.entries[index].0 & PAGE_HUGE) == 0);
             let address = PageTable::<L>::allocate_page();
@@ -257,7 +255,8 @@ pub fn virt_to_phys(page: VirtualAddress) -> Option<PhysicalAddress> {
 
 pub fn map_page(virt: VirtualAddress, phys: PhysicalAddress, flags: u64) -> Result<(), ()> {
     let mut apt = ACTIVE_PAGE_TABLE.write();
-    let p1 = apt.p4_mut().next_layer_create(virt.p4_index())
+    let p1 = apt.p4_mut()
+        .next_layer_create(virt.p4_index())
         .and_then(|mut p3| p3.next_layer_create(virt.p3_index()))
         .and_then(|mut p2| p2.next_layer_create(virt.p2_index()));
     match p1 {
@@ -266,7 +265,7 @@ pub fn map_page(virt: VirtualAddress, phys: PhysicalAddress, flags: u64) -> Resu
             entry[virt.p1_index()].set(phys.0 | flags | PAGE_PRESENT);
             invlpg(virt.0);
             Ok(())
-        },
+        }
         None => Err(()),
     }
 
