@@ -14,7 +14,7 @@ const TABLE_ENTRY_COUNT: usize = 512;
 const UNUSED_ENTRY: u64 = 0xcccccccc;
 
 
-pub const PAGE_PRESENT: u64 = 1 << 0;
+pub const PAGE_PRESENT: u64 = 1;
 pub const PAGE_WRITABLE: u64 = 1 << 1;
 pub const PAGE_USER_ACCESSIBLE: u64 = 1 << 2;
 pub const PAGE_CACHE_WRITE_THROUGH: u64 = 1 << 3;
@@ -96,7 +96,7 @@ impl VirtualAddress {
     }
 
     fn p1_index(&self) -> usize {
-        ((self.0 >> 0) & 0o777) as usize
+        (self.0 & 0o777) as usize
     }
 
     fn mask(&self) -> u64 {
@@ -122,6 +122,15 @@ impl<L: PageTableLevel> Default for PageTable<L> {
 
 
 impl PageTable<Level4> {
+    fn new() -> Self {
+        let mut pt4: Self = Default::default();
+        pt4.set_fractal();
+        pt4
+    }
+}
+
+
+impl PageTable<Level4> {
     pub unsafe fn load(&self) {
         let pa = virt_to_phys(VirtualAddress(self.entries.as_ptr() as u64))
             .expect("Fractal paging not working");
@@ -141,7 +150,7 @@ impl PageTable<Level4> {
     }
 
 
-    pub unsafe fn from_cpu(&self) -> PhysicalAddress {
+    pub unsafe fn from_cpu() -> PhysicalAddress {
         PhysicalAddress(vmx::read_cr3())
     }
 }
@@ -207,7 +216,7 @@ impl<L: PageTableLevel> PageTable<L> {
 impl<L: HierarchicalLevel> PageTable<L> {
     fn next_layer_address(&self, index: usize) -> Option<usize> {
         let flags = &self[index];
-        if (flags.0 & PAGE_PRESENT == 0) && !(flags.0 & PAGE_HUGE == 0) {
+        if ((flags.0 & PAGE_PRESENT) == 0) && !(flags.0 & PAGE_HUGE == 0) {
             let table_address = self as *const _ as usize;
             Some((table_address << 9) | (index << 12))
         } else {
