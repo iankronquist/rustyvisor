@@ -1,5 +1,5 @@
 use core::mem;
-use cli;
+use interrupts::cli;
 
 #[repr(packed)]
 #[allow(dead_code)]
@@ -96,7 +96,7 @@ impl<'a> GDTDescriptor {
 #[cfg(feature = "runtime_tests")]
 pub mod runtime_tests {
 
-    use cli;
+    use interrupts::cli;
     use super::GDTDescriptor;
 
     pub fn run() {

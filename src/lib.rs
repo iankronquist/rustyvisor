@@ -20,7 +20,6 @@ extern crate collections;
 #[macro_use]
 extern crate log;
 
-pub mod cli;
 pub mod cpu;
 mod dispatch_table;
 pub mod hash_map;
@@ -74,10 +73,10 @@ pub extern "C" fn rustyvisor_unload() {
 fn runtime_tests() {
     info!("Executing runtime tests...");
 
-    cli::runtime_tests::run();
     cpu::runtime_tests::run();
     segmentation::runtime_tests::run();
     interrupts::runtime_tests::run();
+    interrupts::cli::runtime_tests::run();
 
     info!("Runtime tests succeeded");
 }
