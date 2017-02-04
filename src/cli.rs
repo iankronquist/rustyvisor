@@ -1,8 +1,7 @@
 use core::ops;
 use vmx;
 use cpu;
-use core::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
-
+use core::sync::atomic::{AtomicUsize, AtomicBool, ATOMIC_BOOL_INIT, Ordering};
 
 lazy_static! {
     static ref CLI_COUNT: cpu::PerCoreVariable<AtomicUsize> = Default::default();
@@ -14,79 +13,140 @@ pub fn are_interrupts_enabled() -> bool {
 }
 
 
+#[cfg(not(test))]
 pub fn cli() {
+    info!("Clearing interrupts!");
     unsafe {
         asm!("cli" : : :);
     }
 }
 
 
+#[cfg(test)]
+pub fn cli() { }
+
+
+#[cfg(not(test))]
 pub fn sti() {
+    info!("Restoring interrupts!");
     unsafe {
         asm!("sti" : : :);
     }
 }
 
 
+#[cfg(test)]
+pub fn sti() { }
+
+
 #[derive(Default)]
-pub struct ClearLocalInterruptsGuard<T> {
+pub struct ClearLocalInterrupts<T> {
     guarded: T,
-    count: AtomicUsize,
 }
 
 
-impl<T> ClearLocalInterruptsGuard<T> {
+pub struct ClearLocalInterruptsGuard<'a, T: 'a> {
+    guarded: &'a T,
+    acquired: AtomicBool,
+}
+
+
+pub struct ClearLocalInterruptsGuardMut<'a, T: 'a> {
+    guarded: &'a mut T,
+    acquired: AtomicBool,
+}
+
+
+
+impl<T> ClearLocalInterrupts<T> {
     pub fn new(guarded: T) -> Self {
-        ClearLocalInterruptsGuard {
+        ClearLocalInterrupts {
             guarded: guarded,
-            count: ATOMIC_USIZE_INIT,
         }
+    }
+
+    pub fn cli_mut(&mut self) -> ClearLocalInterruptsGuardMut<T> {
+        info!("new mut!");
+        ClearLocalInterruptsGuardMut { guarded: &mut self.guarded, acquired: ATOMIC_BOOL_INIT }
+    }
+
+
+    pub fn cli(&self) -> ClearLocalInterruptsGuard<T> {
+        info!("new!");
+        ClearLocalInterruptsGuard { guarded: &self.guarded, acquired: ATOMIC_BOOL_INIT }
     }
 }
 
 
-impl<T> ops::Deref for ClearLocalInterruptsGuard<T> {
+impl<'a, T> ops::Deref for ClearLocalInterruptsGuard<'a, T> {
     type Target = T;
     fn deref(&self) -> &T {
-        cli();
-        if self.count.fetch_add(1, Ordering::AcqRel) == 0 {
-            CLI_COUNT.get().fetch_add(1, Ordering::AcqRel);
+        if !self.acquired.compare_and_swap(false, true, Ordering::AcqRel) {
+            if CLI_COUNT.get().fetch_add(1, Ordering::AcqRel) == 0 {
+                cli();
+            }
         }
-        &self.guarded
+        self.guarded
     }
 }
 
 
-impl<T> ops::DerefMut for ClearLocalInterruptsGuard<T> {
+impl<'a, T> ops::Deref for ClearLocalInterruptsGuardMut<'a, T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        if !self.acquired.compare_and_swap(false, true, Ordering::AcqRel) {
+            if CLI_COUNT.get().fetch_add(1, Ordering::AcqRel) == 0 {
+                cli();
+            }
+        }
+        self.guarded
+    }
+}
+
+
+impl<'a, T> ops::DerefMut for ClearLocalInterruptsGuardMut<'a, T> {
     fn deref_mut(&mut self) -> &mut T {
-        cli();
-        if self.count.fetch_add(1, Ordering::AcqRel) == 0 {
-            CLI_COUNT.get().fetch_add(1, Ordering::AcqRel);
+        if !self.acquired.compare_and_swap(false, true, Ordering::AcqRel) {
+            if CLI_COUNT.get().fetch_add(1, Ordering::AcqRel) == 0 {
+                cli();
+            }
         }
-        &mut self.guarded
+        self.guarded
     }
 }
 
 
-impl<T> Drop for ClearLocalInterruptsGuard<T> {
+impl<'a, T> Drop for ClearLocalInterruptsGuard<'a, T> {
     fn drop(&mut self) {
+        info!("Drop! {}", CLI_COUNT.get().load(Ordering::Relaxed));
         if CLI_COUNT.get().fetch_sub(1, Ordering::AcqRel) == 1 {
             sti();
         }
     }
 }
 
+
+impl<'a, T> Drop for ClearLocalInterruptsGuardMut<'a, T> {
+    fn drop(&mut self) {
+        info!("Drop! {}", CLI_COUNT.get().load(Ordering::Relaxed));
+        if CLI_COUNT.get().fetch_sub(1, Ordering::AcqRel) == 1 {
+            sti();
+        }
+    }
+}
+
+
 #[cfg(feature = "runtime_tests")]
 pub mod runtime_tests {
     use super::are_interrupts_enabled;
-    use super::ClearLocalInterruptsGuard;
+    use super::ClearLocalInterrupts;
 
     struct Guardee {
         data: u16,
     }
 
     lazy_static! {
-        static ref STATIC_GUARDEE: ClearLocalInterruptsGuard<Guardee> = ClearLocalInterruptsGuard::new(Guardee { data: 0 });
+        static ref STATIC_GUARDEE: ClearLocalInterrupts<Guardee> = ClearLocalInterrupts::new(Guardee { data: 0 });
     }
 
     impl Guardee {
@@ -105,12 +165,12 @@ pub mod runtime_tests {
     fn test_clear_local_interrupts_guard_mut_borrow() {
         assert!(are_interrupts_enabled());
         {
-            let mut g: ClearLocalInterruptsGuard<Guardee> = ClearLocalInterruptsGuard::new(Guardee { data: 0 });
+            let mut g: ClearLocalInterrupts<Guardee> = ClearLocalInterrupts::new(Guardee { data: 0 });
             assert!(are_interrupts_enabled());
-            (*g).data += 1;
-            assert!(!are_interrupts_enabled());
-            assert_eq!((*g).data, 1);
-            assert!(!are_interrupts_enabled());
+            g.cli_mut().data += 1;
+            assert!(are_interrupts_enabled());
+            assert_eq!(g.cli().data, 1);
+            assert!(are_interrupts_enabled());
         }
         assert!(are_interrupts_enabled());
     }
@@ -119,10 +179,12 @@ pub mod runtime_tests {
     fn test_clear_local_interrupts_guard_borrow() {
         assert!(are_interrupts_enabled());
         {
-            let g: ClearLocalInterruptsGuard<Guardee> = ClearLocalInterruptsGuard::new(Guardee { data: 0 });
+            let g: ClearLocalInterrupts<Guardee> = ClearLocalInterrupts::new(Guardee { data: 0 });
             assert!(are_interrupts_enabled());
-            (*g).do_work();
-            assert!(!are_interrupts_enabled());
+            let borrowed = &g.cli();
+            assert!(are_interrupts_enabled());
+            borrowed.do_work();
+            assert!(are_interrupts_enabled());
         }
         assert!(are_interrupts_enabled());
     }
@@ -132,13 +194,11 @@ pub mod runtime_tests {
         assert!(are_interrupts_enabled());
         {
             assert!(are_interrupts_enabled());
-            (*STATIC_GUARDEE).do_work();
-            assert!(!are_interrupts_enabled());
-            assert_eq!((*STATIC_GUARDEE).data, 0);
-            assert!(!are_interrupts_enabled());
+            STATIC_GUARDEE.cli().do_work();
+            assert!(are_interrupts_enabled());
+            assert_eq!(STATIC_GUARDEE.cli().data, 0);
+            assert!(are_interrupts_enabled());
         }
         assert!(are_interrupts_enabled());
     }
-
-
 }
