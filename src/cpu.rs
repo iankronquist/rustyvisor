@@ -118,4 +118,20 @@ mod tests {
         pcv.vars[0] = 42;
         assert_eq!(*pcv.get(), 42);
     }
+
+    #[test]
+    fn test_atomic() {
+        use core::sync::atomic::{AtomicUsize};
+        init(4);
+        let mut pcv: PerCoreVariable<AtomicUsize> = Default::default();
+        assert_eq!(pcv.get().load(Ordering::Relaxed), 0);
+        {
+            let b = pcv.get_mut();
+            b.store(42, Ordering::Relaxed);
+        }
+        assert_eq!(pcv.get().load(Ordering::Relaxed), 42);
+
+    }
+
+
 }
