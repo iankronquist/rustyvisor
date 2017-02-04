@@ -19,15 +19,16 @@ extern crate collections;
 #[macro_use]
 extern crate log;
 
-mod cli;
+pub mod cli;
 pub mod cpu;
-pub mod dispatch_table;
-pub mod gdt;
+mod dispatch_table;
 pub mod hash_map;
 pub mod interrupts;
 mod isr;
 pub mod runtime;
+pub mod segmentation;
 pub mod vmx;
+
 #[cfg(not(test))]
 mod serial_logger;
 
@@ -71,7 +72,9 @@ pub extern "C" fn rustyvisor_unload() {
 fn runtime_tests() {
     info!("Executing runtime tests...");
 
-    gdt::runtime_tests::run();
+    cli::runtime_tests::run();
+    cpu::runtime_tests::run();
+    segmentation::runtime_tests::run();
     interrupts::runtime_tests::run();
 
     info!("Runtime tests succeeded");

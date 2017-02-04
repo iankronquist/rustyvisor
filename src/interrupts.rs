@@ -86,7 +86,7 @@ impl IDT {
 
 
 pub struct InterruptTable {
-    descriptor_table: cli::ClearLocalInterruptsGuard<IDT>,
+    descriptor_table: cli::ClearLocalInterrupts<IDT>,
     dispatch_table: DispatchTable<u64, InterruptCPUState>,
 }
 
@@ -102,7 +102,7 @@ impl Default for InterruptTable {
 
 impl InterruptTable {
     fn as_ptr(&self) -> *const IDT {
-        (*self.descriptor_table).0.as_ptr() as *const IDT
+        self.descriptor_table.cli().0.as_ptr() as *const IDT
     }
 }
 
@@ -117,14 +117,14 @@ pub fn register_interrupt_handler(interrupt: u64,
                                   handler: DispatchFn<u64, InterruptCPUState>) {
     let mut table = INTERRUPT_TABLE.write();
     table.dispatch_table.register(interrupt, handler);
-    table.descriptor_table.set_entry(interrupt as usize, stub as u64, 0x08, 0x8e);
+    table.descriptor_table.cli_mut().set_entry(interrupt as usize, stub as u64, 0x08, 0x8e);
 }
 
 
 pub fn unregister_interrupt_handler(interrupt: u64) {
     let mut table = INTERRUPT_TABLE.write();
     table.dispatch_table.unregister(interrupt);
-    table.descriptor_table.set_entry(interrupt as usize, 0, 0, 0);
+    table.descriptor_table.cli_mut().set_entry(interrupt as usize, 0, 0, 0);
 }
 
 
@@ -154,18 +154,18 @@ pub struct IDTDescriptor {
 }
 
 
-impl IDTDescriptor {
-    pub fn new() -> cli::ClearLocalInterruptsGuard<IDTDescriptor> {
-        cli::ClearLocalInterruptsGuard::new(IDTDescriptor {
+impl<'a> IDTDescriptor {
+    pub fn new() -> cli::ClearLocalInterrupts<IDTDescriptor> {
+        cli::ClearLocalInterrupts::new(IDTDescriptor {
             limit: (mem::size_of::<IDT>() - 1) as u16,
             base: (*INTERRUPT_TABLE).read().as_ptr() as u64,
         })
     }
 
-    pub fn from_cpu() -> cli::ClearLocalInterruptsGuard<IDTDescriptor> {
+    pub fn from_cpu() -> cli::ClearLocalInterrupts<IDTDescriptor> {
         let mut current_idt_ptr: IDTDescriptor = Default::default();
         sidt(&mut current_idt_ptr);
-        cli::ClearLocalInterruptsGuard::new(current_idt_ptr)
+        cli::ClearLocalInterrupts::new(current_idt_ptr)
     }
 
     pub fn load(&self) {
@@ -177,18 +177,22 @@ impl IDTDescriptor {
 #[cfg(feature = "runtime_tests")]
 pub mod runtime_tests {
 
+
     use interrupts::IDTDescriptor;
 
+    #[cfg(feature = "runtime_tests")]
     pub fn run() {
+        use cli;
         info!("Executing interrupt tests...");
         test_load_and_restore_idt();
+        assert!(cli::are_interrupts_enabled());
         info!("Interrupt tests succeeded");
     }
 
     fn test_load_and_restore_idt() {
         let orig_idt_desc = IDTDescriptor::from_cpu();
         let idt_desc = IDTDescriptor::new();
-        idt_desc.load();
-        orig_idt_desc.load();
+        idt_desc.cli().load();
+        orig_idt_desc.cli().load();
     }
 }
