@@ -25,6 +25,7 @@ mod dispatch_table;
 pub mod hash_map;
 pub mod interrupts;
 mod isr;
+pub mod os;
 pub mod paging;
 pub mod runtime;
 pub mod segmentation;
@@ -33,10 +34,12 @@ pub mod vmx;
 #[cfg(not(test))]
 mod serial_logger;
 
+
 include!(concat!(env!("OUT_DIR"), "/version.rs"));
 
+
 #[no_mangle]
-pub extern "C" fn rustyvisor_load(_heap: *mut u8, _heap_size: u64, _: *mut u8, _: u64) -> u32 {
+pub extern "C" fn rustyvisor_load(kernel_data: &mut os::KernelData) -> u32 {
 
     cpu::init(1);
     cpu::bring_core_online();
