@@ -4,6 +4,7 @@ MODULENAME := rustyvisor
 obj-m += $(MODULENAME).o
 $(MODULENAME)-objs += loader/linux.o target/$(TARGET)/$(RELEASE)/lib$(MODULENAME).a src/interrupts/handlers.o
 KDIR := /lib/modules/$(shell uname -r)/build
+ASFLAGS += -mcmodel=kernel -fno-pic
 LDFLAGS += -T $(SUBDIRS)/loader/linux_linker.lds
 CARGO := cargo
 XARGO := xargo
