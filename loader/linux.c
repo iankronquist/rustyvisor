@@ -1,40 +1,81 @@
 #include <linux/module.h>
-#include <linux/slab.h>
+#include <linux/vmalloc.h>
 
 #define MODULE_NAME "RustyVisor"
-#define KB (0x1000)
-#define MB (0x1000 * KB)
+#define KB (1024)
+#define MB (1024 * KB)
 #define HEAP_SIZE (256 * KB)
 
-extern u32 rustyvisor_load(char *heap, u64 heap_size, char *vmx_region, u64 phys_vmx_region);
+struct translation {
+	u64 physical;
+	u64 virtual;
+};
+
+
+struct kernel_data {
+	u64 heap_size;
+	u64 translations_count;
+	u8 *heap;
+	struct translation *translations;
+};
+
+
+struct kernel_data kernel_data;
+
+
+extern u32 rustyvisor_load(struct kernel_data *);
 extern u32 rustyvisor_unload(void);
 
-extern u32 __module_start;
-extern u32 __module_end;
+extern char __module_start;
+extern char __module_end;
 
-char *vmx_region = NULL;
-char *heap = NULL;
-phys_addr_t phys_vmx_region;
-const size_t vmcs_size = 0x1000;
-const size_t vmx_region_size = 0x1000;
+
+static int build_translations(struct kernel_data *info) {
+	int i = 0;
+	u8 *heap_page;
+	char *module_page;
+
+	info->translations_count = (info->heap_size + __module_end -
+			__module_start) / PAGE_SIZE;
+	info->translations = vmalloc(info->translations_count * sizeof(struct translation));
+	if (info->translations == 0) {
+		return -1;
+	}
+
+	for (heap_page = info->heap;
+			heap_page < info->heap + info->heap_size;
+			heap_page += PAGE_SIZE, ++i) {
+		info->translations[i].virtual = (u64)heap_page;
+		info->translations[i].physical = virt_to_phys(heap_page);
+	}
+
+	for (module_page = &__module_start;
+			module_page < &__module_end;
+			module_page += PAGE_SIZE, ++i) {
+		info->translations[i].virtual = (u64)module_page;
+		info->translations[i].physical = virt_to_phys(module_page);
+	}
+
+	return 0;
+}
 
 
 static int __init rustyvisor_init(void) {
 	int err;
 
-	heap = kmalloc(HEAP_SIZE, GFP_KERNEL);
-	if (heap == NULL)
+	kernel_data.heap_size = HEAP_SIZE;
+	kernel_data.heap = vmalloc(HEAP_SIZE);
+	if (kernel_data.heap == NULL)
+		return -ENOMEM;
+	printk("heap alloc'd\n");
+
+	err = build_translations(&kernel_data);
+	if (err != 0)
 		return -ENOMEM;
 
-	vmx_region = kmalloc(vmx_region_size, GFP_KERNEL);
-	if (vmx_region == NULL) {
-		kfree(heap);
-		return -ENOMEM;
-	}
+	printk("build translations alloc'd\n");
 
-	phys_vmx_region = virt_to_phys(vmx_region);
-
-	err = rustyvisor_load(heap, HEAP_SIZE, vmx_region, phys_vmx_region);
+	err = rustyvisor_load(&kernel_data);
 	if (err != 0)
 		return -1;
 
@@ -44,8 +85,8 @@ static int __init rustyvisor_init(void) {
 
 static void __exit rustyvisor_exit(void) {
 	rustyvisor_unload();
-	kfree(heap);
-	kfree(vmx_region);
+	vfree(kernel_data.heap);
+	vfree(kernel_data.translations);
 }
 
 
