@@ -8,6 +8,7 @@ use core::ops::{Index, IndexMut};
 use core::ptr::Unique;
 use collections::boxed::Box;
 use spin::RwLock;
+use os;
 use vmx;
 
 const TABLE_ENTRY_COUNT: usize = 512;
@@ -16,6 +17,8 @@ const UNUSED_ENTRY: u64 = 0xcccccccc;
 
 pub const PAGE_PRESENT: u64 = 1;
 pub const PAGE_WRITABLE: u64 = 1 << 1;
+//pub const PAGE_WRITABLE: u64 = (1 << 1) | (1 << 63);
+pub const PAGE_READ_ONLY: u64 = 1 << 63;
 pub const PAGE_USER_ACCESSIBLE: u64 = 1 << 2;
 pub const PAGE_CACHE_WRITE_THROUGH: u64 = 1 << 3;
 pub const PAGE_NO_CACHE: u64 = 1 << 4;
@@ -113,6 +116,7 @@ pub struct PageTable<L: PageTableLevel> {
 
 impl<L: PageTableLevel> Default for PageTable<L> {
     fn default() -> Self {
+        info!("Making default page table");
         PageTable {
             entries: [Default::default(); TABLE_ENTRY_COUNT],
             level: PhantomData,
@@ -123,31 +127,34 @@ impl<L: PageTableLevel> Default for PageTable<L> {
 
 impl PageTable<Level4> {
     fn new() -> Self {
+        info!("Making default");
         let mut pt4: Self = Default::default();
+        info!("Setting fractal");
         pt4.set_fractal();
+        info!("ret");
         pt4
     }
 }
 
+pub unsafe fn load_physical(pa: PhysicalAddress) {
+    vmx::write_cr3(pa.0);
+}
+
+
 
 impl PageTable<Level4> {
-    pub unsafe fn load(&self) {
-        let pa = virt_to_phys(VirtualAddress(self.entries.as_ptr() as u64))
-            .expect("Fractal paging not working");
-        self.load_physical(pa);
+    pub unsafe fn load(&mut self) {
+        let pa = ACTIVE_PAGE_TABLE.write().virt_to_phys(VirtualAddress(self.entries.as_ptr() as u64)).expect("Fractal paging not working");
+        load_physical(pa);
     }
 
 
     pub fn set_fractal(&mut self) {
-        let pa = virt_to_phys(VirtualAddress(self.entries.as_ptr() as u64))
+        let pa = ACTIVE_PAGE_TABLE.write().virt_to_phys(VirtualAddress(self.entries.as_ptr() as u64))
             .expect("Page table unmapped?");
         self.entries[TABLE_ENTRY_COUNT - 1].set(pa.0);
     }
 
-
-    pub unsafe fn load_physical(&self, pa: PhysicalAddress) {
-        vmx::write_cr3(pa.0);
-    }
 
 
     pub unsafe fn from_cpu() -> PhysicalAddress {
@@ -167,13 +174,14 @@ pub const P4: *mut PageTable<Level4> = 0o177777_777_777_777_777_0000 as *mut _;
 
 
 pub struct ActivePageTable {
+    linear_offset: isize,
     p4: Unique<PageTable<Level4>>,
 }
 
 lazy_static! {
     static ref ACTIVE_PAGE_TABLE: RwLock<ActivePageTable> = {
         unsafe {
-            RwLock::new(ActivePageTable { p4: Unique::new(P4) })
+            RwLock::new(ActivePageTable { p4: Unique::new(P4), linear_offset: 0 })
         }
     };
 }
@@ -185,6 +193,21 @@ impl ActivePageTable {
 
     pub fn p4_mut(&mut self) -> &mut PageTable<Level4> {
         unsafe { self.p4.get_mut() }
+    }
+
+    pub fn init(&mut self, host_offset: isize) {
+        self.linear_offset = host_offset;
+    }
+
+
+    pub fn virt_to_phys(&self, page: VirtualAddress) -> Option<PhysicalAddress> {
+
+        let p3 = self.p4().next_layer(page.p4_index());
+        info!("Recursing from p3");
+
+        p3.and_then(|p3| p3.next_layer(page.p3_index()))
+            .and_then(|p2| p2.next_layer(page.p2_index()))
+            .and_then(|p1| p1[page.p1_index()].physical_address())
     }
 }
 
@@ -251,17 +274,6 @@ impl<L: HierarchicalLevel> PageTable<L> {
 }
 
 
-pub fn virt_to_phys(page: VirtualAddress) -> Option<PhysicalAddress> {
-
-    let apt = ACTIVE_PAGE_TABLE.read();
-    let p3 = apt.p4().next_layer(page.p4_index());
-
-    p3.and_then(|p3| p3.next_layer(page.p3_index()))
-        .and_then(|p2| p2.next_layer(page.p2_index()))
-        .and_then(|p1| p1[page.p1_index()].physical_address())
-}
-
-
 pub fn map_page(virt: VirtualAddress, phys: PhysicalAddress, flags: u64) -> Result<(), ()> {
     let mut apt = ACTIVE_PAGE_TABLE.write();
     let p1 = apt.p4_mut()
@@ -277,5 +289,61 @@ pub fn map_page(virt: VirtualAddress, phys: PhysicalAddress, flags: u64) -> Resu
         }
         None => Err(()),
     }
+}
 
+pub fn map_hypervisor(translations: *const os::Translation, translation_size: u64) -> Result<(), ()> {
+    for i in 0..translation_size {
+        info!("mapping translation {}", i);
+        let result: Result<(), ()>;
+        unsafe {
+            info!("{} -> {}", (*translations.offset(i as isize)).virt,
+                              (*translations.offset(i as isize)).phys);
+            result = map_page(VirtualAddress((*translations.offset(i as isize)).virt),
+                PhysicalAddress((*translations.offset(i as isize)).phys),
+                PAGE_WRITABLE);
+        }
+        match result {
+            Err(()) => return Err(()),
+            _ => continue,
+        }
+    }
+    Ok(())
+}
+
+pub fn get_host_linear_offset(translations: *const os::Translation, translation_size: u64) -> isize {
+    assert!(translation_size > 0);
+    unsafe {
+        ((*translations).virt - (*translations).phys) as isize
+    }
+}
+
+#[cfg(feature = "runtime_tests")]
+pub mod runtime_tests {
+
+
+    use super::*;
+
+    #[cfg(feature = "runtime_tests")]
+    pub fn run(translations: *const os::Translation, translation_size: u64) {
+        info!("Executing paging tests...");
+        test_load_and_restore_page_tables(translations, translation_size);
+        info!("Paging tests succeeded");
+    }
+
+    fn test_load_and_restore_page_tables(translations: *const os::Translation, translation_size: u64) {
+        info!("Making new page table");
+        let mut new = PageTable::new();
+        info!("Mapping hypervisor");
+        let result = map_hypervisor(translations, translation_size);
+        assert_eq!(result, Ok(()));
+
+        unsafe {
+            info!("Getting original page table");
+            let original = PageTable::from_cpu();
+            info!("Loading new page table");
+            new.load();
+            info!("Reloading original");
+            load_physical(original);
+        }
+    }
 }
