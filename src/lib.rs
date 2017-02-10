@@ -79,8 +79,7 @@ fn runtime_tests(kernel_data: &mut os::KernelData) {
     segmentation::runtime_tests::run();
     interrupts::runtime_tests::run();
     interrupts::cli::runtime_tests::run();
-    paging::runtime_tests::run(kernel_data.translations,
-        kernel_data.translations_count);
+    paging::runtime_tests::run(kernel_data.translations, kernel_data.translations_count);
 
     info!("Runtime tests succeeded");
 }

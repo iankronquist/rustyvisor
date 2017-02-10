@@ -4,7 +4,7 @@ use core::mem;
 use os;
 use spin::{Once, RwLock};
 
-const PAGE_TABLE_SIZE: usize =  512;
+const PAGE_TABLE_SIZE: usize = 512;
 
 static OFFSET: Once<isize> = Once::new();
 
@@ -98,11 +98,7 @@ fn init_offset(translations: *const os::Translation, translation_size: u64) {
     assert!(!translations.is_null());
     assert!(translation_size > 0);
 
-    OFFSET.call_once(|| {
-        unsafe {
-            ((*translations).virt - (*translations).phys) as isize
-        }
-    });
+    OFFSET.call_once(|| unsafe { ((*translations).virt - (*translations).phys) as isize });
 }
 
 fn get_offset() -> isize {
@@ -142,7 +138,10 @@ impl PageTable {
         p1.entries[virt.p1_index()].set(phys.0 | flags | PAGE_PRESENT);
     }
 
-    pub fn map_hypervisor(&mut self, translations: *const os::Translation, translation_size: u64) -> Result<(), ()> {
+    pub fn map_hypervisor(&mut self,
+                          translations: *const os::Translation,
+                          translation_size: u64)
+                          -> Result<(), ()> {
         assert!(!translations.is_null());
         assert!(translation_size != 0);
         for off in 0..translation_size {
@@ -157,8 +156,6 @@ impl PageTable {
         }
         Err(())
     }
-
-
 }
 
 impl CurrentPageTable {
@@ -194,21 +191,16 @@ impl<L: PageTableLevel> PageTableLayer<L> {
 
 
 impl<L: HierarchicalLevel> PageTableLayer<L> {
-
     fn next_layer_create(&mut self, index: usize) -> &mut PageTableLayer<L::NextLevel> {
         if self.entries[index].is_present() {
             let virt = self.entries[index].as_virtual_address();
-            unsafe {
-                &mut *(virt.0 as * mut _)
-            }
+            unsafe { &mut *(virt.0 as *mut _) }
         } else {
             let mut new_layer: PageTableLayer<L::NextLevel> = Default::default();
             let virt = new_layer.as_virtual_address();
             let phys = virt.as_physical_address();
             self.entries[index].set(phys.0 | PAGE_WRITABLE);
-            unsafe {
-                mem::transmute(&mut new_layer)
-            }
+            unsafe { mem::transmute(&mut new_layer) }
         }
     }
 }
@@ -253,7 +245,8 @@ pub mod runtime_tests {
         info!("Interrupt paging succeeded");
     }
 
-    fn test_load_and_restore_page_tables(translations: *const os::Translation, translation_size: u64) {
+    fn test_load_and_restore_page_tables(translations: *const os::Translation,
+                                         translation_size: u64) {
         assert_eq!(paging::init(translations, translation_size), Ok(()));
         let mut pt: paging::PageTable = Default::default();
         let mut current_page_table = paging::CURRENT_PAGE_TABLE.write();
