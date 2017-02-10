@@ -5,7 +5,6 @@
 #![feature(const_fn)]
 #![feature(integer_atomics)]
 #![feature(lang_items)]
-#![feature(unique)]
 
 #![allow(unknown_lints)]
 
@@ -59,7 +58,7 @@ pub extern "C" fn rustyvisor_load(kernel_data: &mut os::KernelData) -> u32 {
 
 
     #[cfg(feature = "runtime_tests")]
-    runtime_tests();
+    runtime_tests(kernel_data);
 
     0
 }
@@ -73,13 +72,15 @@ pub extern "C" fn rustyvisor_unload() {
 }
 
 #[cfg(feature = "runtime_tests")]
-fn runtime_tests() {
+fn runtime_tests(kernel_data: &mut os::KernelData) {
     info!("Executing runtime tests...");
 
     cpu::runtime_tests::run();
     segmentation::runtime_tests::run();
     interrupts::runtime_tests::run();
     interrupts::cli::runtime_tests::run();
+    paging::runtime_tests::run(kernel_data.translations,
+        kernel_data.translations_count);
 
     info!("Runtime tests succeeded");
 }
