@@ -228,7 +228,7 @@ impl VirtualAddress {
     }
 
     fn p1_index(&self) -> usize {
-        ((self.0 >> 0) & 0o777) as usize
+        (self.0 & 0o777) as usize
     }
 }
 
