@@ -486,17 +486,6 @@ pub fn write_cr0(val: u64) {
     }
 }
 
-pub fn write_cr3(val: u64) {
-    unsafe {
-        asm!(
-            "mov $0, %cr3"
-            :
-            : "r"(val)
-            :
-            );
-    }
-}
-
 pub fn write_cr4(val: u64) {
     unsafe {
         asm!(
@@ -524,19 +513,6 @@ pub fn read_cr0() -> u64 {
     unsafe {
         asm!(
             "mov %cr0, $0"
-            : "=r"(ret)
-            :
-            :
-            );
-    }
-    ret
-}
-
-pub fn read_cr3() -> u64 {
-    let ret: u64;
-    unsafe {
-        asm!(
-            "mov %cr3, $0"
             : "=r"(ret)
             :
             :
