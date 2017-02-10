@@ -47,7 +47,7 @@ pub extern "C" fn rustyvisor_load(kernel_data: &mut os::KernelData) -> u32 {
     if cpu::get_number() == 0 {
         #[cfg(not(test))]
         {
-            allocator::init(_heap_size, _heap);
+            allocator::init(kernel_data.heap_size, kernel_data.heap);
             match serial_logger::init() {
                 Ok(()) => {}
                 Err(_e) => return 1,
