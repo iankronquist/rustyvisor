@@ -1,6 +1,5 @@
 use core::marker::PhantomData;
 use core::mem;
-//use core::ptr::Unique;
 use os;
 use spin::{Once, RwLock};
 
