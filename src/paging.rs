@@ -118,7 +118,7 @@ impl PageTableEntry {
         self.0 = flags;
     }
 
-    fn is_present(&mut self) -> bool {
+    fn is_present(&self) -> bool {
         self.0 & PAGE_PRESENT != 0
     }
 
