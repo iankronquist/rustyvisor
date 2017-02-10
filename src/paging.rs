@@ -45,13 +45,7 @@ unsafe fn read_cr3() -> u64 {
 }
 
 lazy_static! {
-    static ref CURRENT_PAGE_TABLE: RwLock<CurrentPageTable> = {
-        //unsafe {
-            RwLock::new(CurrentPageTable {
-                //pt: Unique::new(CurrentPageTable::from_cpu())
-            })
-        //}
-    };
+    static ref CURRENT_PAGE_TABLE: RwLock<CurrentPageTable> = RwLock::new(CurrentPageTable(()));
 }
 
 #[derive(Clone, Copy, Default)]
@@ -95,9 +89,7 @@ struct PageTableLayer<L: PageTableLevel> {
 struct PageTable(PageTableLayer<Level4>);
 
 
-struct CurrentPageTable {
-    //pt: Unique<PageTable>,
-}
+struct CurrentPageTable(());
 
 pub struct VirtualAddress(u64);
 pub struct PhysicalAddress(u64);
@@ -170,14 +162,6 @@ impl PageTable {
 }
 
 impl CurrentPageTable {
-    /*
-    fn get_top_level(&mut self) -> &mut PageTableLayer<Level4> {
-        unsafe {
-            &mut self.pt.get_mut().0
-        }
-    }
-    */
-
     unsafe fn from_cpu() -> *mut PageTable {
         read_cr3() as *mut PageTable
     }
@@ -211,19 +195,6 @@ impl<L: PageTableLevel> PageTableLayer<L> {
 
 impl<L: HierarchicalLevel> PageTableLayer<L> {
 
-    /*
-    fn next_layer_mut(&mut self, index: usize) -> Option<&mut PageTableLayer<L::NextLevel>> {
-        if self.entries[index].is_present() {
-            let virt = self.entries[index].as_virtual_address();
-            unsafe {
-                Some(&mut *(virt.0 as * mut _))
-            }
-        } else {
-            None
-        }
-    }
-    */
-
     fn next_layer_create(&mut self, index: usize) -> &mut PageTableLayer<L::NextLevel> {
         if self.entries[index].is_present() {
             let virt = self.entries[index].as_virtual_address();
@@ -240,16 +211,6 @@ impl<L: HierarchicalLevel> PageTableLayer<L> {
             }
         }
     }
-
-    /*
-    unsafe fn from_virtual_address<'a>(virt: VirtualAddress) -> Option<&'a PageTableLayer<L>> {
-        if virt.0 == 0 {
-            None
-        } else {
-            Some(&*(virt.0 as *const _))
-        }
-    }
-    */
 }
 
 impl PhysicalAddress {
