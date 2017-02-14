@@ -207,13 +207,13 @@ impl<L: HierarchicalLevel> PageTableLayer<L> {
 
 impl PhysicalAddress {
     pub fn as_virtual_address(&self) -> VirtualAddress {
-        VirtualAddress(self.0 + get_offset() as u64)
+        VirtualAddress(self.0.wrapping_add(get_offset()))
     }
 }
 
 impl VirtualAddress {
     pub fn as_physical_address(&self) -> PhysicalAddress {
-        PhysicalAddress(self.0 - get_offset() as u64)
+        PhysicalAddress(self.0.wrapping_sub(get_offset()))
     }
 
     fn p4_index(&self) -> usize {
