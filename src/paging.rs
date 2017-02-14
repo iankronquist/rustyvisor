@@ -154,7 +154,7 @@ impl PageTable {
             self.map(virt, phys, PAGE_WRITABLE);
 
         }
-        Err(())
+        Ok(())
     }
 }
 
