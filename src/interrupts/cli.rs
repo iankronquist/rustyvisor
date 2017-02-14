@@ -181,7 +181,7 @@ pub mod runtime_tests {
             let borrowed = g.cli();
             assert!(are_interrupts_enabled());
             borrowed.do_work();
-            assert!(!are_interrupts_enabled());
+            assert!(are_interrupts_enabled());
         }
         assert!(are_interrupts_enabled());
     }

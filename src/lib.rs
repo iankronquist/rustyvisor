@@ -19,12 +19,13 @@ extern crate collections;
 #[macro_use]
 extern crate log;
 
-pub mod cli;
 pub mod cpu;
 mod dispatch_table;
 pub mod hash_map;
 pub mod interrupts;
 mod isr;
+pub mod os;
+pub mod paging;
 pub mod runtime;
 pub mod segmentation;
 pub mod vmx;
@@ -32,10 +33,12 @@ pub mod vmx;
 #[cfg(not(test))]
 mod serial_logger;
 
+
 include!(concat!(env!("OUT_DIR"), "/version.rs"));
 
+
 #[no_mangle]
-pub extern "C" fn rustyvisor_load(_heap: *mut u8, _heap_size: u64, _: *mut u8, _: u64) -> u32 {
+pub extern "C" fn rustyvisor_load(kernel_data: &mut os::KernelData) -> u32 {
 
     cpu::init(1);
     cpu::bring_core_online();
@@ -43,7 +46,7 @@ pub extern "C" fn rustyvisor_load(_heap: *mut u8, _heap_size: u64, _: *mut u8, _
     if cpu::get_number() == 0 {
         #[cfg(not(test))]
         {
-            allocator::init(_heap_size, _heap);
+            allocator::init(kernel_data.heap_size, kernel_data.heap);
             match serial_logger::init() {
                 Ok(()) => {}
                 Err(_e) => return 1,
@@ -55,7 +58,7 @@ pub extern "C" fn rustyvisor_load(_heap: *mut u8, _heap_size: u64, _: *mut u8, _
 
 
     #[cfg(feature = "runtime_tests")]
-    runtime_tests();
+    runtime_tests(kernel_data);
 
     0
 }
@@ -69,13 +72,14 @@ pub extern "C" fn rustyvisor_unload() {
 }
 
 #[cfg(feature = "runtime_tests")]
-fn runtime_tests() {
+fn runtime_tests(kernel_data: &mut os::KernelData) {
     info!("Executing runtime tests...");
 
-    cli::runtime_tests::run();
     cpu::runtime_tests::run();
     segmentation::runtime_tests::run();
     interrupts::runtime_tests::run();
+    interrupts::cli::runtime_tests::run();
+    paging::runtime_tests::run(kernel_data.translations, kernel_data.translations_count);
 
     info!("Runtime tests succeeded");
 }

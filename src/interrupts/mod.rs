@@ -1,8 +1,9 @@
 use dispatch_table::{DispatchTable, DispatchFn};
 use spin::RwLock;
 use core::mem;
-use cli;
 use isr;
+
+pub mod cli;
 
 
 #[derive(Copy, Clone, Default)]
@@ -182,7 +183,7 @@ pub mod runtime_tests {
 
     #[cfg(feature = "runtime_tests")]
     pub fn run() {
-        use cli;
+        use interrupts::cli;
         info!("Executing interrupt tests...");
         test_load_and_restore_idt();
         assert!(cli::are_interrupts_enabled());
