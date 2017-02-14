@@ -5,7 +5,7 @@ use spin::{Once, RwLock};
 
 const PAGE_TABLE_SIZE: usize = 512;
 
-static OFFSET: Once<isize> = Once::new();
+static OFFSET: Once<u64> = Once::new();
 
 // FIXME make enum
 pub const PAGE_PRESENT: u64 = 1;
@@ -97,10 +97,11 @@ fn init_offset(translations: *const os::Translation, translation_size: u64) {
     assert!(!translations.is_null());
     assert!(translation_size > 0);
 
-    OFFSET.call_once(|| unsafe { ((*translations).virt - (*translations).phys) as isize });
+    OFFSET.call_once(|| unsafe { ((*translations).virt - (*translations).phys) });
+    info!("Calculated offset {:x}", get_offset());
 }
 
-fn get_offset() -> isize {
+fn get_offset() -> u64 {
     *OFFSET.call_once(|| panic!("Must initialize offset before using it"))
 }
 
