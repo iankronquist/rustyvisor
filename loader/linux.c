@@ -34,27 +34,37 @@ static int build_translations(struct kernel_data *info) {
 	int i = 0;
 	u8 *heap_page;
 	char *module_page;
+	printk("build translations entered\n");
 
 	info->translations_count = (info->heap_size + __module_end -
 			__module_start) / PAGE_SIZE;
 	info->translations = vmalloc(info->translations_count * sizeof(struct translation));
 	if (info->translations == 0) {
+		printk("build translations vmalloc failed\n");
+
 		return -1;
 	}
+	printk("build translations vmalloc'd %p\n", info->translations);
 
 	for (heap_page = info->heap;
 			heap_page < info->heap + info->heap_size;
 			heap_page += PAGE_SIZE, ++i) {
 		info->translations[i].virtual = (u64)heap_page;
 		info->translations[i].physical = virt_to_phys(heap_page);
+		printk("heap page %p\n", heap_page);
+
 	}
+	printk("build translations heap translated\n");
 
 	for (module_page = &__module_start;
 			module_page < &__module_end;
 			module_page += PAGE_SIZE, ++i) {
 		info->translations[i].virtual = (u64)module_page;
 		info->translations[i].physical = virt_to_phys(module_page);
+		printk("module page %p\n", module_page);
+
 	}
+	printk("build translations module translated\n");
 
 	return 0;
 }
