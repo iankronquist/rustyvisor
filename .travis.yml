@@ -3,7 +3,7 @@ os: linux
 sudo: required
 cache: cargo
 rust:
-  - nightly
+  - nightly-2017-04-11
 
 install:
   - if [[ ! -e $HOME/.cargo/bin/rustup ]]; then
