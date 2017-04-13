@@ -11,8 +11,8 @@ install:
       cargo install clippy --force;
     fi
   - source ~/.cargo/env
-  - rustup install nightly
-  - rustup default nightly
+  - rustup install nightly-2017-04-11
+  - rustup default nightly-2017-04-11
   - rustup component add rust-src
   - sudo apt-get install linux-headers-$(uname -r)
   - cargo install xargo || true
