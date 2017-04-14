@@ -7,5 +7,6 @@
   "os": "none",
   "features": "-mmx,-sse,+soft-float",
   "code-model": "kernel",
+  "linker-flavor": "gcc",
   "disable-redzone": true
 }
