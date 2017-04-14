@@ -34,8 +34,7 @@ static int build_translations(struct kernel_data *info) {
 	int i = 0;
 	u8 *heap_page;
 	char *module_page;
-	printk("build translations entered\n");
-
+	printk("build translations entered %p %p %p\n", info, &__module_end, &__module_start);
 	info->translations_count = (info->heap_size + (uintptr_t)&__module_end -
 			(uintptr_t)&__module_start) / PAGE_SIZE;
 	info->translations = vmalloc(info->translations_count * sizeof(struct translation));
