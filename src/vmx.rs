@@ -1,6 +1,41 @@
+use core::mem;
+
 #[repr(u32)]
 pub enum MSR {
-    EFER = 0xc0000080,
+    EFER                     = 0xc0000080,
+    Ia32FeatureControl       = 0x0000003a,
+    Ia32VmxBasic             = 0x00000480,
+    Ia32VmxPinBasedCtls      = 0x00000481,
+    Ia32VmxProcBasedCtls     = 0x00000482,
+    Ia32VmxExitCtls          = 0x00000483,
+    Ia32VmxEntryCtls         = 0x00000484,
+    Ia32VmxMisc              = 0x00000485,
+    Ia32VmxCr0Fixed0         = 0x00000486,
+    Ia32VmxCr0Fixed1         = 0x00000487,
+    Ia32VmxCr4Fixed0         = 0x00000488,
+    Ia32VmxCr4Fixed1         = 0x00000489,
+    Ia32VmxVmcsEnum          = 0x0000048a,
+    Ia32VmxProcBasedCtls2    = 0x0000048b,
+    Ia32VmxEptVpidCap        = 0x0000048c,
+    Ia32VmxTruePinBasedCtls  = 0x0000048d,
+    Ia32VmxTrueProcBasedCtls = 0x0000048e,
+    Ia32VmxTrueExitCtls      = 0x0000048f,
+    Ia32VmxTrueEntryCtls     = 0x00000490,
+    Ia32VmxVmFunc            = 0x00000491,
+}
+
+const IA32_FEATURE_CONTROL_LOCK_BIT: u32 = (1 << 0);
+const IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT: u32 = (1 << 2);
+
+#[repr(u32)]
+pub enum CPUIDLeaf {
+    ProcessorInfoAndFeatures = 1,
+}
+
+#[repr(u32)]
+pub enum CPUIDLeafProcessorInfoAndFeaturesECXBits {
+    VMXAvailable = 1 << 5,
+    HypervisorPresent = 1 << 31,
 }
 
 #[repr(u64)]
@@ -184,6 +219,21 @@ pub enum VMCSField {
 }
 
 
+pub fn cpuid(mut eax: u32) -> (u32, u32, u32, u32) {
+    let ebx: u32;
+    let ecx: u32;
+    let edx: u32;
+    unsafe {
+        asm!("cpuid"
+              : "+{eax}"(eax), "={ebx}"(ebx), "={ecx}"(ecx), "={edx}"(edx)
+              :
+              :
+            )
+    };
+
+    (eax, ebx, ecx, edx)
+}
+
 
 pub fn vmxon(addr: u64) -> Result<(), u32> {
     let ret: u32;
@@ -258,6 +308,21 @@ pub fn rdmsr(msr: MSR) -> (u32, u32) {
     }
     (edx, eax)
 }
+
+pub fn rdmsrl(msr: MSR) -> u64 {
+    let edx: u32;
+    let eax: u32;
+    unsafe {
+        asm!(
+            "rdmsr"
+             : "={eax}"(eax) "={edx}"(edx)
+             : "{ecx}"(msr)
+             :
+            );
+    }
+    ((edx as u64) << 32) | (eax as u64)
+}
+
 
 pub fn wrmsr(msr: MSR, eax: u32, edx: u32) {
     unsafe {
@@ -583,4 +648,110 @@ pub fn read_flags() -> u64 {
             );
     }
     ret
+}
+
+fn vmx_available() -> bool {
+    let (_eax, _ebx, ecx, _edx) = cpuid(CPUIDLeaf::ProcessorInfoAndFeatures as u32);
+    ecx & (CPUIDLeafProcessorInfoAndFeaturesECXBits::VMXAvailable as u32) != 0
+}
+
+// FIXME: Memoize
+fn get_vmcs_revision_identifier() -> u32 {
+    let (_high_bits, vmcs_revision_identifier) = rdmsr(MSR::Ia32VmxBasic);
+    assert!((vmcs_revision_identifier & (1 << 31)) == 0);
+    vmcs_revision_identifier
+}
+
+
+fn set_cr0_bits() {
+    let fixed0 = rdmsrl(MSR::Ia32VmxCr0Fixed0);
+    let fixed1 = rdmsrl(MSR::Ia32VmxCr0Fixed1);
+    let mut cr0 = read_cr0();
+    cr0 |= fixed0;
+    cr0 &= fixed1;
+    write_cr0(cr0);
+}
+
+fn set_cr4_bits() {
+    let fixed0 = rdmsrl(MSR::Ia32VmxCr4Fixed0);
+    let fixed1 = rdmsrl(MSR::Ia32VmxCr4Fixed1);
+    let mut cr4 = read_cr4();
+    cr4 |= fixed0;
+    cr4 &= fixed1;
+    write_cr4(cr4);
+}
+
+fn set_lock_bit() -> Result<(), ()> {
+    let (_high, low) = rdmsr(MSR::Ia32FeatureControl);
+    if (low & IA32_FEATURE_CONTROL_LOCK_BIT) == 0 {
+        wrmsr(MSR::Ia32FeatureControl, _high, low | IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT | IA32_FEATURE_CONTROL_LOCK_BIT);
+        Ok(())
+    } else if (low & IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT) == 0 {
+        Err(())
+    } else {
+        Ok(())
+    }
+}
+
+
+fn prepare_vmx_memory_region(vmx_region: *mut u8, vmx_region_size: usize) {
+    assert!(!vmx_region.is_null());
+    assert!(vmx_region_size <= 0x1000);
+    assert!(vmx_region_size > mem::size_of::<u32>());
+
+    let vmcs_revision_identifier = get_vmcs_revision_identifier();
+
+    let vmx_region_dwords = vmx_region as *mut u32;
+
+    unsafe {
+        *vmx_region_dwords = vmcs_revision_identifier;
+    }
+
+    for i in mem::size_of::<u32>()..vmx_region_size {
+        unsafe {
+            *vmx_region_dwords.offset(i as isize) = 0;
+        }
+    }
+}
+
+pub fn enable(vmxon_region: *mut u8, vmxon_region_phys: u64, vmxon_region_size: usize) -> Result<(), ()> {
+
+    assert!(((vmxon_region as u64) & 0xfff) == 0);
+    assert!((vmxon_region_phys & 0xfff) == 0);
+
+    if vmxon_region.is_null() {
+        error!("Bad VMX on region");
+        return Err(());
+    }
+
+    if !vmx_available() {
+        error!("VMX unavailable");
+        return Err(());
+    }
+
+    if set_lock_bit() != Ok(()) {
+        error!("Lock bit not set");
+        return Err(());
+    }
+
+    set_cr0_bits();
+    set_cr4_bits();
+
+    prepare_vmx_memory_region(vmxon_region, vmxon_region_size);
+
+    let result = vmxon(vmxon_region_phys);
+    // FIXME: Fix error types
+    if result == Ok(()) {
+        info!("vmxon succeeded");
+        return Ok(());
+    } else {
+        error!("vmxon failed");
+        return Err(());
+    }
+}
+
+
+pub fn disable() {
+    vmxoff();
+    info!("vmxoff");
 }

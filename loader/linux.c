@@ -1,51 +1,117 @@
+#include <linux/atomic.h>
+#include <linux/kthread.h>
 #include <linux/module.h>
+#include <linux/semaphore.h>
 #include <linux/slab.h>
 
-#define MODULE_NAME "RustyVisor"
+#define MODULE_NAME "Rustyvisor"
 #define KB (0x1000)
 #define MB (0x1000 * KB)
 #define HEAP_SIZE (256 * KB)
 
-extern u32 rustyvisor_load(char *heap, u64 heap_size, char *vmx_region, u64 phys_vmx_region);
-extern u32 rustyvisor_unload(void);
+struct core_data {
+	struct task_struct *task;
+	void *vmxon_region;
+	void *vmcs;
+	u64 vmxon_region_phys;
+	u64 vmcs_phys;
+	size_t vmxon_region_size;
+	size_t vmcs_size;
+	bool loaded_successfully;
+};
 
-extern u32 __module_start;
-extern u32 __module_end;
+extern int rustyvisor_core_load(struct core_data* core_data);
+extern int rustyvisor_core_unload(void *);
+extern int rustyvisor_load(void);
+extern void rustyvisor_unload(void);
 
-char *vmx_region = NULL;
-char *heap = NULL;
-phys_addr_t phys_vmx_region;
+int rustyvisor_loader_core_load(void *core_data);
+static int __init rustyvisor_init(void);
+static void __exit rustyvisor_exit(void);
+
+struct semaphore semaphore;
+atomic_t failure_count;
+static DEFINE_PER_CPU(struct core_data, per_core_data);
 const size_t vmcs_size = 0x1000;
 const size_t vmx_region_size = 0x1000;
 
+int rustyvisor_loader_core_load(void *core_data) {
+	u32 core_load_status;
+	down(&semaphore);
+	core_load_status = rustyvisor_core_load(core_data);
+	if (core_load_status != 0) {
+		atomic_inc(&failure_count);
+	}
+	up(&semaphore);
+	return 0;
+}
+
 
 static int __init rustyvisor_init(void) {
+	int cpu;
 	int err;
+	struct core_data *core_data;
 
-	heap = kmalloc(HEAP_SIZE, GFP_KERNEL);
-	if (heap == NULL)
-		return -ENOMEM;
+	rustyvisor_load();
 
-	vmx_region = kmalloc(vmx_region_size, GFP_KERNEL);
-	if (vmx_region == NULL) {
-		kfree(heap);
-		return -ENOMEM;
+	sema_init(&semaphore, 1);
+	atomic_set(&failure_count, 0);
+
+	for_each_online_cpu(cpu) {
+		core_data = get_cpu_ptr(&per_core_data);
+
+		core_data->vmcs_size = vmcs_size;
+		core_data->vmcs = kmalloc(vmcs_size, GFP_KERNEL);
+		if (core_data->vmcs == NULL) {
+			atomic_inc(&failure_count);
+			break;
+		}
+		core_data->vmcs_phys = virt_to_phys(core_data->vmcs);
+
+		core_data->vmxon_region_size = vmx_region_size;
+		core_data->vmxon_region = kmalloc(vmx_region_size, GFP_KERNEL);
+		if (core_data->vmxon_region == NULL) {
+			kfree(core_data->vmcs);
+			atomic_inc(&failure_count);
+			break;
+		}
+		core_data->vmxon_region_phys = virt_to_phys(core_data->vmxon_region);
+
+		core_data->task = kthread_create(rustyvisor_loader_core_load, core_data, "rustyvisor_core_load");
+		kthread_bind(core_data->task, cpu);
+
+
+		wake_up_process(core_data->task);
+		put_cpu_ptr(core_data);
 	}
 
-	phys_vmx_region = virt_to_phys(vmx_region);
-
-	err = rustyvisor_load(heap, HEAP_SIZE, vmx_region, phys_vmx_region);
-	if (err != 0)
+	err = atomic_read(&failure_count);
+	if (err != 0) {
+		rustyvisor_exit();
 		return -1;
+	}
 
 	return 0;
 }
 
 
 static void __exit rustyvisor_exit(void) {
+	int cpu;
+	struct task_struct *task;
+	struct core_data *core_data;
+	sema_init(&semaphore, 1);
+
+	for_each_online_cpu(cpu) {
+		core_data = get_cpu_ptr(&per_core_data);
+		task = kthread_create(rustyvisor_core_unload, NULL, "rustyvisor_core_unload");
+		kthread_bind(task, cpu);
+		wake_up_process(task);
+		kfree(core_data->vmcs);
+		kfree(core_data->vmxon_region);
+		put_cpu_ptr(core_data);
+	}
+
 	rustyvisor_unload();
-	kfree(heap);
-	kfree(vmx_region);
 }
 
 

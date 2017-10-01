@@ -1,81 +1,120 @@
 #![no_std]
-#![feature(alloc)]
 #![feature(asm)]
-#![feature(collections)]
 #![feature(const_fn)]
+#![feature(use_extern_macros)]
 #![feature(integer_atomics)]
 #![feature(lang_items)]
 
 #![allow(unknown_lints)]
 
-extern crate alloc;
-#[cfg(not(test))]
-extern crate allocator;
-extern crate spin;
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate collections;
-#[macro_use]
-extern crate log;
-
-pub mod cli;
 pub mod cpu;
-mod dispatch_table;
-pub mod hash_map;
+pub mod vmx;
+/*
+pub mod cli;
 pub mod interrupts;
 mod isr;
 pub mod runtime;
 pub mod segmentation;
-pub mod vmx;
+*/
+
+pub mod runtime;
+#[macro_use]
+mod linux;
+
+#[macro_use]
+extern crate log;
+
+extern crate spin;
 
 #[cfg(not(test))]
+#[cfg(feature = "dmesg_logger")]
+#[macro_use]
+mod dmesg_logger;
+#[cfg(not(test))]
+#[cfg(feature = "dmesg_logger")]
+use dmesg_logger as logger;
+
+#[cfg(not(test))]
+#[cfg(not(feature = "dmesg_logger"))]
 mod serial_logger;
+#[cfg(not(test))]
+#[cfg(not(feature = "dmesg_logger"))]
+use serial_logger as logger;
 
 include!(concat!(env!("OUT_DIR"), "/version.rs"));
 
+/*
 #[no_mangle]
-pub extern "C" fn rustyvisor_load(_heap: *mut u8, _heap_size: u64, _: *mut u8, _: u64) -> u32 {
+pub extern "C" fn dispatch_interrupt() {}
+*/
 
-    cpu::init(1);
-    cpu::bring_core_online();
+#[repr(C)]
+pub struct PerCoreData {
+	task: *const u8,
+	vmxon_region: *mut u8,
+	vmcs: *mut u8,
+	vmxon_region_phys: u64,
+	vmcs_phys: u64,
+	vmxon_region_size: usize,
+	vmcs_region_size: usize,
+	loaded_successfully: bool,
+}
 
-    if cpu::get_number() == 0 {
-        #[cfg(not(test))]
-        {
-            allocator::init(_heap_size, _heap);
-            match serial_logger::init() {
-                Ok(()) => {}
-                Err(_e) => return 1,
-            }
+#[no_mangle]
+pub extern "C" fn rustyvisor_load() -> i32 {
+    #[cfg(not(test))]
+    {
+        match logger::init() {
+            Ok(()) => {},
+            Err(_) => return 1,
         }
-
-        info!("{}", VERSION);
     }
 
+    info!("{}", VERSION);
 
     #[cfg(feature = "runtime_tests")]
     runtime_tests();
 
     0
+
 }
 
 #[no_mangle]
+pub extern "C" fn rustyvisor_core_load(data: *const PerCoreData) -> i32 {
+    error!("core load");
+    if data.is_null() {
+        return 1;
+    }
+
+    unsafe {
+        if vmx::enable((*data).vmxon_region, (*data).vmxon_region_phys, (*data).vmxon_region_size) != Ok(()) {
+            return 1;
+        }
+    }
+
+    0
+}
+
+#[no_mangle]
+pub extern "C" fn rustyvisor_core_unload() {
+    error!("core unload");
+    vmx::disable();
+}
+
+
+#[no_mangle]
 pub extern "C" fn rustyvisor_unload() {
+
     #[cfg(not(test))]
     {
-        let _ = serial_logger::fini();
+        let _ = logger::fini();
     }
+
+    info!("Hypervisor unloaded.");
 }
 
 #[cfg(feature = "runtime_tests")]
 fn runtime_tests() {
     info!("Executing runtime tests...");
-
-    cli::runtime_tests::run();
-    cpu::runtime_tests::run();
-    segmentation::runtime_tests::run();
-    interrupts::runtime_tests::run();
-
     info!("Runtime tests succeeded");
 }
