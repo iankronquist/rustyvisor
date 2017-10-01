@@ -72,10 +72,12 @@ impl log::Log for SerialLogger {
 
     fn log(&self, record: &log::LogRecord) {
         if self.enabled(record.metadata()) {
-            let _ = write!(SERIAL_PORT_MUTEX.lock(),
-                           "{}: {}\n",
-                           record.level(),
-                           record.args());
+            let _ = write!(
+                SERIAL_PORT_MUTEX.lock(),
+                "{}: {}\n",
+                record.level(),
+                record.args()
+            );
         }
     }
 }

@@ -684,10 +684,11 @@ fn set_cr4_bits() {
 fn set_lock_bit() -> Result<(), ()> {
     let (_high, low) = rdmsr(MSR::Ia32FeatureControl);
     if (low & IA32_FEATURE_CONTROL_LOCK_BIT) == 0 {
-        wrmsr(MSR::Ia32FeatureControl,
-              _high,
-              low | IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT |
-              IA32_FEATURE_CONTROL_LOCK_BIT);
+        wrmsr(
+            MSR::Ia32FeatureControl,
+            _high,
+            low | IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT | IA32_FEATURE_CONTROL_LOCK_BIT,
+        );
         Ok(())
     } else if (low & IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT) == 0 {
         Err(())
@@ -717,10 +718,11 @@ fn prepare_vmx_memory_region(vmx_region: *mut u8, vmx_region_size: usize) {
     }
 }
 
-pub fn enable(vmxon_region: *mut u8,
-              vmxon_region_phys: u64,
-              vmxon_region_size: usize)
-              -> Result<(), ()> {
+pub fn enable(
+    vmxon_region: *mut u8,
+    vmxon_region_phys: u64,
+    vmxon_region_size: usize,
+) -> Result<(), ()> {
 
     assert!(((vmxon_region as u64) & 0xfff) == 0);
     assert!((vmxon_region_phys & 0xfff) == 0);

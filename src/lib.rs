@@ -46,8 +46,7 @@ pub extern "C" fn rustyvisor_load() -> i32 {
 
     info!("{}", VERSION);
 
-    #[cfg(feature = "runtime_tests")]
-    runtime_tests();
+    #[cfg(feature = "runtime_tests")] runtime_tests();
 
     0
 
@@ -60,9 +59,12 @@ pub extern "C" fn rustyvisor_core_load(data: *const PerCoreData) -> i32 {
     }
 
     unsafe {
-        if vmx::enable((*data).vmxon_region,
-                       (*data).vmxon_region_phys,
-                       (*data).vmxon_region_size) != Ok(()) {
+        if vmx::enable(
+            (*data).vmxon_region,
+            (*data).vmxon_region_phys,
+            (*data).vmxon_region_size,
+        ) != Ok(())
+        {
             return 1;
         }
     }
