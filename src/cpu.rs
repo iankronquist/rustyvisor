@@ -1,22 +1,10 @@
 use vmx;
-use collections::vec::Vec;
 use core::sync::atomic::{ATOMIC_U16_INIT, AtomicU16, Ordering};
-use spin;
+
+const CPU_COUNT_MAX: usize = 32;
 
 
-static CPU_COUNT: spin::Once<u16> = spin::Once::new();
 static CPU_ASSIGNMENT: AtomicU16 = ATOMIC_U16_INIT;
-
-
-pub fn init(count: u16) {
-    CPU_COUNT.call_once(|| count);
-}
-
-fn get_cpu_count() -> u16 {
-    *CPU_COUNT.call_once(|| {
-        panic!("Must initialize CPU count before requesting it");
-    })
-}
 
 
 pub fn bring_core_online() {
@@ -26,29 +14,20 @@ pub fn bring_core_online() {
 
 
 fn set_number(num: u16) {
-    vmx::write_es(num);
+    vmx::write_fs(num);
 }
 
 
 pub fn get_number() -> u16 {
-    vmx::read_es()
+    vmx::read_fs()
 }
 
 
+#[derive(Default)]
 pub struct PerCoreVariable<T> {
-    vars: Vec<T>,
+    vars: [T; CPU_COUNT_MAX],
 }
 
-
-impl<T: Default> Default for PerCoreVariable<T> {
-    fn default() -> Self {
-        let mut vars = vec![];
-        for _ in 0..get_cpu_count() {
-            vars.push(Default::default());
-        }
-        PerCoreVariable { vars: vars }
-    }
-}
 
 
 impl<T> PerCoreVariable<T> {
@@ -62,35 +41,15 @@ impl<T> PerCoreVariable<T> {
 }
 
 
-impl<T: Clone> PerCoreVariable<T> {
-    pub fn new(item: T) -> Self {
-        PerCoreVariable { vars: vec![item; get_cpu_count() as usize] }
-    }
-}
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
 
     #[test]
-    fn test_new() {
-        init(4);
-        let pcv: PerCoreVariable<u32> = PerCoreVariable::new(42);
-        assert_eq!(pcv.vars.len(), 4);
-        for variable in &pcv.vars {
-            assert_eq!(*variable, 42);
-        }
-    }
-
-
-    #[test]
     fn test_default() {
-        init(4);
         let pcv: PerCoreVariable<u32> = Default::default();
         let def: u32 = Default::default();
-        assert_eq!(pcv.vars.len(), 4);
         for variable in &pcv.vars {
             assert_eq!(*variable, def);
         }
@@ -98,11 +57,10 @@ mod tests {
 
     #[test]
     fn test_get_mut() {
-        init(4);
         let mut pcv: PerCoreVariable<u32> = Default::default();
         assert_eq!(*pcv.get(), 0);
         {
-            let mut b = pcv.get_mut();
+            let b = pcv.get_mut();
             *b = 42;
         }
         assert_eq!(*pcv.get(), 42);
@@ -111,7 +69,6 @@ mod tests {
 
     #[test]
     fn test_get() {
-        init(4);
         let mut pcv: PerCoreVariable<u32> = Default::default();
         assert_eq!(*pcv.get(), 0);
         pcv.vars[0] = 42;
@@ -121,7 +78,6 @@ mod tests {
     #[test]
     fn test_atomic() {
         use core::sync::atomic::AtomicUsize;
-        init(4);
         let mut pcv: PerCoreVariable<AtomicUsize> = Default::default();
         assert_eq!(pcv.get().load(Ordering::Relaxed), 0);
         {
@@ -145,7 +101,6 @@ pub mod runtime_tests {
 
     fn test_atomic() {
         use core::sync::atomic::AtomicUsize;
-        init(1);
         let mut pcv: PerCoreVariable<AtomicUsize> = Default::default();
         assert_eq!(pcv.get().load(Ordering::Relaxed), 0);
         {
