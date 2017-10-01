@@ -7,43 +7,20 @@
 
 #![allow(unknown_lints)]
 
-pub mod cpu;
-pub mod vmx;
-/*
-pub mod cli;
-pub mod interrupts;
-mod isr;
-pub mod runtime;
-pub mod segmentation;
-*/
-
-pub mod runtime;
 #[macro_use]
 extern crate log;
-
 extern crate spin;
 
-#[cfg(not(test))]
-#[cfg(feature = "dmesg_logger")]
-#[macro_use]
-mod dmesg_logger;
-#[cfg(not(test))]
-#[cfg(feature = "dmesg_logger")]
-use dmesg_logger as logger;
+pub mod vmx;
+pub mod runtime;
 
 #[cfg(not(test))]
-#[cfg(not(feature = "dmesg_logger"))]
 mod serial_logger;
-#[cfg(not(test))]
-#[cfg(not(feature = "dmesg_logger"))]
 use serial_logger as logger;
+
 
 include!(concat!(env!("OUT_DIR"), "/version.rs"));
 
-/*
-#[no_mangle]
-pub extern "C" fn dispatch_interrupt() {}
-*/
 
 #[repr(C)]
 pub struct PerCoreData {
