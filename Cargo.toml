@@ -12,6 +12,7 @@ log = { default-features = false, version = "0.3" }
 
 [features]
 runtime_tests = []
+dmesg_logger = []
 
 [lib]
 crate_type = ["staticlib"]
