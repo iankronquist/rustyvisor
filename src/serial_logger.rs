@@ -1,11 +1,20 @@
 use log;
+//#[macro_use]
 use core::fmt;
-use collections::String;
+use core::fmt::Write;
+use spin::Mutex;
+
 
 const PORT: u16 = 0x3f8;
 
 #[derive(Default)]
-pub struct SerialLogger(());
+pub struct SerialPort;
+
+#[derive(Default)]
+pub struct SerialLogger;
+
+
+static SERIAL_PORT_MUTEX: Mutex<SerialPort> = Mutex::new(SerialPort);
 
 fn outw(port: u16, data: u16) {
     unsafe {
@@ -27,7 +36,7 @@ fn inb(port: u16) -> u8 {
     data
 }
 
-impl fmt::Write for SerialLogger {
+impl fmt::Write for SerialPort {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
         for c in s.chars() {
             while (inb(PORT + 5) & 0x20) == 0 {}
@@ -37,10 +46,9 @@ impl fmt::Write for SerialLogger {
     }
 }
 
-pub fn write_static(s: &'static str) {
-    for c in s.chars() {
-        while (inb(PORT + 5) & 0x20) == 0 {}
-        outb(PORT, c as u8);
+impl fmt::Write for SerialLogger {
+    fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
+        SERIAL_PORT_MUTEX.lock().write_str(s)
     }
 }
 
@@ -55,13 +63,6 @@ impl SerialLogger {
         outw(PORT + 4, 0x0b);
         outw(PORT + 1, 0x01);
     }
-
-    fn write_string(&self, s: String) {
-        for c in s.chars() {
-            while (inb(PORT + 5) & 0x20) == 0 {}
-            outb(PORT, c as u8);
-        }
-    }
 }
 
 impl log::Log for SerialLogger {
@@ -71,8 +72,12 @@ impl log::Log for SerialLogger {
 
     fn log(&self, record: &log::LogRecord) {
         if self.enabled(record.metadata()) {
-            let log_message = format!("{}: {}\n", record.level(), record.args());
-            self.write_string(log_message);
+            let _ = write!(
+                SERIAL_PORT_MUTEX.lock(),
+                "{}: {}\n",
+                record.level(),
+                record.args()
+            );
         }
     }
 }
@@ -80,7 +85,7 @@ impl log::Log for SerialLogger {
 pub fn init() -> Result<(), log::SetLoggerError> {
     unsafe {
         log::set_logger_raw(|max_log_level| {
-            static LOGGER: SerialLogger = SerialLogger(());
+            static LOGGER: SerialLogger = SerialLogger;
             LOGGER.init();
             max_log_level.set(log::LogLevelFilter::Debug);
             &LOGGER
