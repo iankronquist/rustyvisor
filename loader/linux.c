@@ -21,7 +21,7 @@ struct core_data {
 };
 
 extern int rustyvisor_core_load(struct core_data* core_data);
-extern int rustyvisor_core_unload(void *);
+extern void rustyvisor_core_unload(void);
 extern int rustyvisor_load(void);
 extern void rustyvisor_unload(void);
 
@@ -37,12 +37,19 @@ const size_t vmx_region_size = 0x1000;
 
 int rustyvisor_loader_core_load(void *core_data) {
 	u32 core_load_status;
-	down(&semaphore);
 	core_load_status = rustyvisor_core_load(core_data);
 	if (core_load_status != 0) {
 		atomic_inc(&failure_count);
 	}
 	up(&semaphore);
+	return 0;
+}
+
+
+int rustyvisor_loader_core_unload(void *_) {
+	rustyvisor_core_unload();
+	up(&semaphore);
+	printk("unloading up\n");
 	return 0;
 }
 
@@ -83,6 +90,8 @@ static int __init rustyvisor_init(void) {
 
 		wake_up_process(core_data->task);
 		put_cpu_ptr(core_data);
+
+		down(&semaphore);
 	}
 
 	err = atomic_read(&failure_count);
@@ -103,12 +112,14 @@ static void __exit rustyvisor_exit(void) {
 
 	for_each_online_cpu(cpu) {
 		core_data = get_cpu_ptr(&per_core_data);
-		task = kthread_create(rustyvisor_core_unload, NULL, "rustyvisor_core_unload");
+		task = kthread_create(rustyvisor_loader_core_unload, NULL, "rustyvisor_core_unload");
 		kthread_bind(task, cpu);
 		wake_up_process(task);
 		kfree(core_data->vmcs);
 		kfree(core_data->vmxon_region);
 		put_cpu_ptr(core_data);
+
+		down(&semaphore);
 	}
 
 	rustyvisor_unload();

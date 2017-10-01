@@ -19,9 +19,6 @@ pub mod segmentation;
 
 pub mod runtime;
 #[macro_use]
-mod linux;
-
-#[macro_use]
 extern crate log;
 
 extern crate spin;
@@ -81,7 +78,6 @@ pub extern "C" fn rustyvisor_load() -> i32 {
 
 #[no_mangle]
 pub extern "C" fn rustyvisor_core_load(data: *const PerCoreData) -> i32 {
-    error!("core load");
     if data.is_null() {
         return 1;
     }
@@ -97,7 +93,7 @@ pub extern "C" fn rustyvisor_core_load(data: *const PerCoreData) -> i32 {
 
 #[no_mangle]
 pub extern "C" fn rustyvisor_core_unload() {
-    error!("core unload");
+    info!("core unload");
     vmx::disable();
 }
 
@@ -105,12 +101,12 @@ pub extern "C" fn rustyvisor_core_unload() {
 #[no_mangle]
 pub extern "C" fn rustyvisor_unload() {
 
+    info!("Hypervisor unloaded.");
+
     #[cfg(not(test))]
     {
         let _ = logger::fini();
     }
-
-    info!("Hypervisor unloaded.");
 }
 
 #[cfg(feature = "runtime_tests")]
