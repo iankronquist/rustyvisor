@@ -47,14 +47,14 @@ pub extern "C" fn dispatch_interrupt() {}
 
 #[repr(C)]
 pub struct PerCoreData {
-	task: *const u8,
-	vmxon_region: *mut u8,
-	vmcs: *mut u8,
-	vmxon_region_phys: u64,
-	vmcs_phys: u64,
-	vmxon_region_size: usize,
-	vmcs_region_size: usize,
-	loaded_successfully: bool,
+    task: *const u8,
+    vmxon_region: *mut u8,
+    vmcs: *mut u8,
+    vmxon_region_phys: u64,
+    vmcs_phys: u64,
+    vmxon_region_size: usize,
+    vmcs_region_size: usize,
+    loaded_successfully: bool,
 }
 
 #[no_mangle]
@@ -62,7 +62,7 @@ pub extern "C" fn rustyvisor_load() -> i32 {
     #[cfg(not(test))]
     {
         match logger::init() {
-            Ok(()) => {},
+            Ok(()) => {}
             Err(_) => return 1,
         }
     }
@@ -83,7 +83,9 @@ pub extern "C" fn rustyvisor_core_load(data: *const PerCoreData) -> i32 {
     }
 
     unsafe {
-        if vmx::enable((*data).vmxon_region, (*data).vmxon_region_phys, (*data).vmxon_region_size) != Ok(()) {
+        if vmx::enable((*data).vmxon_region,
+                       (*data).vmxon_region_phys,
+                       (*data).vmxon_region_size) != Ok(()) {
             return 1;
         }
     }

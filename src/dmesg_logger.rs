@@ -42,7 +42,7 @@ pub fn init() -> Result<(), log::SetLoggerError> {
     }
 }
 
-pub fn fini() { }
+pub fn fini() {}
 
 pub fn shutdown() -> Result<(), log::ShutdownLoggerError> {
     log::shutdown_logger_raw().map(|_logger| {})

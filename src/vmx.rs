@@ -2,26 +2,26 @@ use core::mem;
 
 #[repr(u32)]
 pub enum MSR {
-    EFER                     = 0xc0000080,
-    Ia32FeatureControl       = 0x0000003a,
-    Ia32VmxBasic             = 0x00000480,
-    Ia32VmxPinBasedCtls      = 0x00000481,
-    Ia32VmxProcBasedCtls     = 0x00000482,
-    Ia32VmxExitCtls          = 0x00000483,
-    Ia32VmxEntryCtls         = 0x00000484,
-    Ia32VmxMisc              = 0x00000485,
-    Ia32VmxCr0Fixed0         = 0x00000486,
-    Ia32VmxCr0Fixed1         = 0x00000487,
-    Ia32VmxCr4Fixed0         = 0x00000488,
-    Ia32VmxCr4Fixed1         = 0x00000489,
-    Ia32VmxVmcsEnum          = 0x0000048a,
-    Ia32VmxProcBasedCtls2    = 0x0000048b,
-    Ia32VmxEptVpidCap        = 0x0000048c,
-    Ia32VmxTruePinBasedCtls  = 0x0000048d,
+    EFER = 0xc0000080,
+    Ia32FeatureControl = 0x0000003a,
+    Ia32VmxBasic = 0x00000480,
+    Ia32VmxPinBasedCtls = 0x00000481,
+    Ia32VmxProcBasedCtls = 0x00000482,
+    Ia32VmxExitCtls = 0x00000483,
+    Ia32VmxEntryCtls = 0x00000484,
+    Ia32VmxMisc = 0x00000485,
+    Ia32VmxCr0Fixed0 = 0x00000486,
+    Ia32VmxCr0Fixed1 = 0x00000487,
+    Ia32VmxCr4Fixed0 = 0x00000488,
+    Ia32VmxCr4Fixed1 = 0x00000489,
+    Ia32VmxVmcsEnum = 0x0000048a,
+    Ia32VmxProcBasedCtls2 = 0x0000048b,
+    Ia32VmxEptVpidCap = 0x0000048c,
+    Ia32VmxTruePinBasedCtls = 0x0000048d,
     Ia32VmxTrueProcBasedCtls = 0x0000048e,
-    Ia32VmxTrueExitCtls      = 0x0000048f,
-    Ia32VmxTrueEntryCtls     = 0x00000490,
-    Ia32VmxVmFunc            = 0x00000491,
+    Ia32VmxTrueExitCtls = 0x0000048f,
+    Ia32VmxTrueEntryCtls = 0x00000490,
+    Ia32VmxVmFunc = 0x00000491,
 }
 
 const IA32_FEATURE_CONTROL_LOCK_BIT: u32 = (1 << 0);
@@ -684,7 +684,10 @@ fn set_cr4_bits() {
 fn set_lock_bit() -> Result<(), ()> {
     let (_high, low) = rdmsr(MSR::Ia32FeatureControl);
     if (low & IA32_FEATURE_CONTROL_LOCK_BIT) == 0 {
-        wrmsr(MSR::Ia32FeatureControl, _high, low | IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT | IA32_FEATURE_CONTROL_LOCK_BIT);
+        wrmsr(MSR::Ia32FeatureControl,
+              _high,
+              low | IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT |
+              IA32_FEATURE_CONTROL_LOCK_BIT);
         Ok(())
     } else if (low & IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT) == 0 {
         Err(())
@@ -714,7 +717,10 @@ fn prepare_vmx_memory_region(vmx_region: *mut u8, vmx_region_size: usize) {
     }
 }
 
-pub fn enable(vmxon_region: *mut u8, vmxon_region_phys: u64, vmxon_region_size: usize) -> Result<(), ()> {
+pub fn enable(vmxon_region: *mut u8,
+              vmxon_region_phys: u64,
+              vmxon_region_size: usize)
+              -> Result<(), ()> {
 
     assert!(((vmxon_region as u64) & 0xfff) == 0);
     assert!((vmxon_region_phys & 0xfff) == 0);
