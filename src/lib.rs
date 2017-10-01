@@ -16,6 +16,7 @@ pub mod runtime;
 
 #[cfg(not(test))]
 mod serial_logger;
+#[cfg(not(test))]
 use serial_logger as logger;
 
 
