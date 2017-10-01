@@ -7,7 +7,8 @@ KDIR := /lib/modules/$(shell uname -r)/build
 LDFLAGS += -T $(SUBDIRS)/loader/linux_linker.lds
 CARGO := cargo
 XARGO := xargo
-RUSTFILES := libs/*/src/*.rs src/*.rs
+KCOV := kcov
+RUSTFILES := src/*.rs
 RUSTFLAGS='-C relocation-model=static'
 CARFOFEATURES="runtime_tests"
 
@@ -23,10 +24,15 @@ test:
 	cd libs/allocator && $(CARGO) test --verbose
 	$(CARGO) test --verbose
 
+coverage:
+	$(CARGO) test --no-run
+	$(KCOV) --exclude-pattern=/.cargo,/usr/lib --verify target/cov target/debug/$(MODULENAME)-*
+
+
 clean:
 	rm -f *.o *.ko *.ko.unsigned modules.order Module.symvers *.mod.c .*.cmd $($(MODULENAME)-objs)
 	rm -rf .tmp_versions
 	rm -f $($(MODULENAME)-objs)
 	$(XARGO) clean
 
-.PHONY: all clean test
+.PHONY: all clean coverage test
