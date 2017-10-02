@@ -9,6 +9,7 @@
 #define MB (0x1000 * KB)
 #define HEAP_SIZE (256 * KB)
 
+
 struct core_data {
 	struct task_struct *task;
 	void *vmxon_region;
@@ -119,6 +120,9 @@ static void __exit rustyvisor_exit(void) {
 		core_data = get_cpu_ptr(&per_core_data);
 		task = kthread_create(rustyvisor_loader_core_unload, NULL, "rustyvisor_core_unload");
 		kthread_bind(task, cpu);
+
+		down(&semaphore);
+
 		wake_up_process(task);
 		put_cpu_ptr(core_data);
 
