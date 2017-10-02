@@ -31,7 +31,7 @@ pub struct PerCoreData {
     vmxon_region_phys: u64,
     vmcs_phys: u64,
     vmxon_region_size: usize,
-    vmcs_region_size: usize,
+    vmcs_size: usize,
     loaded_successfully: bool,
 }
 
@@ -50,7 +50,6 @@ pub extern "C" fn rustyvisor_load() -> i32 {
     #[cfg(feature = "runtime_tests")] runtime_tests();
 
     0
-
 }
 
 #[no_mangle]
@@ -66,16 +65,26 @@ pub extern "C" fn rustyvisor_core_load(data: *const PerCoreData) -> i32 {
             (*data).vmxon_region_size,
         ) != Ok(())
         {
+            error!("Failed to enable VMX");
             return 1;
         }
     }
 
+    unsafe {
+        if vmx::load_vm((*data).vmcs, (*data).vmcs_phys, (*data).vmcs_size) != Ok(()) {
+            error!("Failed to load VMX");
+            return 1;
+        }
+    }
+
+    info!("Successfully launched VM");
     0
 }
 
 #[no_mangle]
 pub extern "C" fn rustyvisor_core_unload() {
     info!("core unload");
+    vmx::unload_vm();
     vmx::disable();
 }
 
