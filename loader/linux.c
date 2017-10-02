@@ -10,7 +10,8 @@
 #define HEAP_SIZE (256 * KB)
 
 
-struct core_data {
+// FIXME: Use linux per core data macros
+static struct core_data {
 	struct task_struct *task;
 	void *vmxon_region;
 	void *vmcs;
@@ -19,7 +20,7 @@ struct core_data {
 	size_t vmxon_region_size;
 	size_t vmcs_size;
 	bool loaded_successfully;
-};
+} per_core_data[NR_CPUS];
 
 extern int rustyvisor_core_load(struct core_data* core_data);
 extern void rustyvisor_core_unload(void);
@@ -32,7 +33,6 @@ static void __exit rustyvisor_exit(void);
 
 struct semaphore init_lock;
 atomic_t failure_count;
-static DEFINE_PER_CPU(struct core_data, per_core_data);
 const size_t vmcs_size = 0x1000;
 const size_t vmx_region_size = 0x1000;
 
@@ -89,7 +89,7 @@ static int __init rustyvisor_init(void) {
 	atomic_set(&failure_count, 0);
 
 	for_each_online_cpu(cpu) {
-		core_data = get_cpu_ptr(&per_core_data);
+		core_data = &per_core_data[cpu];
 
 		core_data->task = kthread_create(rustyvisor_loader_core_load, NULL, "rustyvisor_core_load");
 		kthread_bind(core_data->task, cpu);
@@ -120,11 +120,9 @@ static void __exit rustyvisor_exit(void) {
 	sema_init(&init_lock, 1);
 
 	for_each_online_cpu(cpu) {
-		core_data = get_cpu_ptr(&per_core_data);
+		core_data = &per_core_data[cpu];
 		task = kthread_create(rustyvisor_loader_core_unload, NULL, "rustyvisor_core_unload");
 		kthread_bind(task, cpu);
-
-		down(&semaphore);
 
 		wake_up_process(task);
 		put_cpu_ptr(core_data);
