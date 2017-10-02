@@ -870,7 +870,7 @@ pub fn load_vm(
 
     if vmlaunch() != Ok(()) {
         match vmread(VMCSField::VMInstructionError) {
-            Ok(vm_instruction_error_number) => error!("Failed to launch VM because {:?}", vm_instruction_error_number_message(vm_instruction_error_number)),
+            Ok(vm_instruction_error_number) => error!("Failed to launch VM because {} ({})", vm_instruction_error_number_message(vm_instruction_error_number), vm_instruction_error_number),
             Err(e) => error!("VMLaunch failed with {}", e),
         }
         return Err(());
