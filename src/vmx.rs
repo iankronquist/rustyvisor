@@ -793,8 +793,8 @@ pub fn enable(
     vmxon_region_size: usize,
 ) -> Result<(), ()> {
 
-    assert!(((vmxon_region as u64) & 0xfff) == 0);
-    assert!((vmxon_region_phys & 0xfff) == 0);
+    assert!(is_page_aligned(vmxon_region as u64));
+    assert!(is_page_aligned(vmxon_region_phys));
 
     if vmxon_region.is_null() {
         error!("Bad VMX on region");
@@ -850,6 +850,9 @@ pub fn load_vm(
     vmcs_phys: u64,
     vmcs_size: usize,
 ) -> Result<(), ()> {
+
+    assert!(is_page_aligned(vmcs as u64));
+    assert!(is_page_aligned(vmcs_phys));
 
     prepare_vmx_memory_region(vmcs, vmcs_size);
 
