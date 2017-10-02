@@ -2,7 +2,6 @@
 #![feature(asm)]
 #![feature(const_fn)]
 #![feature(use_extern_macros)]
-#![feature(integer_atomics)]
 #![feature(lang_items)]
 
 #![allow(unknown_lints)]
