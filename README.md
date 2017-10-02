@@ -11,8 +11,19 @@ type II hypervisor which virtualizes the original host operating system. After
 inserting the module, Linux will be running inside a VM as a guest, and the
 host operating system will be RustyVisor!
 
+## Getting Started
 
-## Installing dependencies
+### Launching Vagrant
+
+A Vagrantfile is included to aid development and testing. It requires libvirt,
+QEMU, and the vagrant-libvirt plugin. Additionally, your system must support NFS
+and nested KVM.
+
+To launch the Vagrant box, simply run `vagrant up` in the repo root and cross
+your fingers. Once launched, access the VM with `vagrant ssh`, and cd to
+/vagrant. You can then build and launch Rustyvisor as described below.
+
+### Installing dependencies manually
 
 RustyVisor depends on nightly Rust, Xargo, GCC, and the Linux kernel module
 development headers.

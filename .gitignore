@@ -7,3 +7,4 @@ modules.order
 *.ko
 *.mod.c
 *.o
+.vagrant/
