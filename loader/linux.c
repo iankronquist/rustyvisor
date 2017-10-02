@@ -100,6 +100,8 @@ static int __init rustyvisor_init(void) {
 		down(&init_lock);
 	}
 
+	down(&semaphore);
+
 	err = atomic_read(&failure_count);
 	if (err != 0) {
 		printk(KERN_DEBUG "%d cores failed to load\n", err);
@@ -129,6 +131,8 @@ static void __exit rustyvisor_exit(void) {
 
 		down(&init_lock);
 	}
+
+	down(&semaphore);
 
 	rustyvisor_unload();
 }
