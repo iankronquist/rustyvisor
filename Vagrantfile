@@ -6,6 +6,7 @@ Vagrant.configure("2") do |config|
   config.vm.synced_folder ".", "/vagrant", type: "nfs", nfs_version: 3
 
   config.vm.provider :libvirt do |libvirt|
+    libvirt.cpus = 2
     libvirt.nested = true
   end
 
