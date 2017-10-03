@@ -11,8 +11,7 @@
 
 
 // FIXME: Use linux per core data macros
-static struct core_data {
-	struct task_struct *task;
+struct core_data {
 	void *vmxon_region;
 	void *vmcs;
 	u64 vmxon_region_phys;

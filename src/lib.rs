@@ -24,7 +24,6 @@ include!(concat!(env!("OUT_DIR"), "/version.rs"));
 
 #[repr(C)]
 pub struct PerCoreData {
-    task: *const u8,
     vmxon_region: *mut u8,
     vmcs: *mut u8,
     vmxon_region_phys: u64,
