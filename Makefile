@@ -9,8 +9,9 @@ CARGO := cargo
 XARGO := xargo
 KCOV := kcov
 RUSTFILES := src/*.rs
-RUSTFLAGS='-C relocation-model=static'
+RUSTFLAGS='-C relocation-model=static --deny warnings'
 CARFOFEATURES="runtime_tests"
+ccflags-y := -Wall -Werror
 
 all: $(MODULENAME).ko
 
