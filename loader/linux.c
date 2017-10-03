@@ -38,8 +38,10 @@ const size_t vmx_region_size = 0x1000;
 
 int rustyvisor_loader_core_load(void *_) {
 	int err = 0;
-	struct core_data *core_data = get_cpu_ptr(&per_core_data);
 	u32 core_load_status;
+	struct core_data *core_data = get_cpu_ptr(&per_core_data);
+
+	memset(core_data, 0, sizeof(*core_data));
 
 	core_data->vmcs_size = vmcs_size;
 	core_data->vmcs = kmalloc(vmcs_size, GFP_KERNEL);
