@@ -29,7 +29,7 @@ int rustyvisor_loader_core_load(void *_);
 static int __init rustyvisor_init(void);
 static void __exit rustyvisor_exit(void);
 
-struct semaphore semaphore;
+struct semaphore init_lock;
 atomic_t failure_count;
 static DEFINE_PER_CPU(struct core_data, per_core_data);
 const size_t vmcs_size = 0x1000;
@@ -60,7 +60,7 @@ int rustyvisor_loader_core_load(void *_) {
 	if (core_load_status != 0) {
 		atomic_inc(&failure_count);
 	}
-	up(&semaphore);
+	up(&init_lock);
 	return 0;
 }
 
@@ -69,7 +69,7 @@ int rustyvisor_loader_core_unload(void *_) {
 	struct core_data *core_data = get_cpu_ptr(&per_core_data);
 
 	rustyvisor_core_unload();
-	up(&semaphore);
+	up(&init_lock);
 	kfree(core_data->vmcs);
 	kfree(core_data->vmxon_region);
 	printk("unloading up\n");
@@ -84,7 +84,7 @@ static int __init rustyvisor_init(void) {
 
 	rustyvisor_load();
 
-	sema_init(&semaphore, 1);
+	sema_init(&init_lock, 1);
 	atomic_set(&failure_count, 0);
 
 	for_each_online_cpu(cpu) {
@@ -96,7 +96,7 @@ static int __init rustyvisor_init(void) {
 		wake_up_process(core_data->task);
 		put_cpu_ptr(core_data);
 
-		down(&semaphore);
+		down(&init_lock);
 	}
 
 	err = atomic_read(&failure_count);
@@ -113,7 +113,7 @@ static void __exit rustyvisor_exit(void) {
 	int cpu;
 	struct task_struct *task;
 	struct core_data *core_data;
-	sema_init(&semaphore, 1);
+	sema_init(&init_lock, 1);
 
 	for_each_online_cpu(cpu) {
 		core_data = get_cpu_ptr(&per_core_data);
@@ -122,7 +122,7 @@ static void __exit rustyvisor_exit(void) {
 		wake_up_process(task);
 		put_cpu_ptr(core_data);
 
-		down(&semaphore);
+		down(&init_lock);
 	}
 
 	rustyvisor_unload();
