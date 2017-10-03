@@ -37,43 +37,50 @@ const size_t vmcs_size = 0x1000;
 const size_t vmx_region_size = 0x1000;
 
 int rustyvisor_loader_core_load(void *_) {
-	struct core_data *core_data = get_cpu_ptr(&per_core_data);
+	int err = 0;
+	struct core_data *core_data = get_cpu_ptr(per_core_data);
 	u32 core_load_status;
 
 	core_data->vmcs_size = vmcs_size;
 	core_data->vmcs = kmalloc(vmcs_size, GFP_KERNEL);
 	if (core_data->vmcs == NULL) {
 		atomic_inc(&failure_count);
-		return 1;
+		err = 1;
+		goto out;
 	}
 	core_data->vmcs_phys = virt_to_phys(core_data->vmcs);
 
 	core_data->vmxon_region_size = vmx_region_size;
 	core_data->vmxon_region = kmalloc(vmx_region_size, GFP_KERNEL);
 	if (core_data->vmxon_region == NULL) {
-		kfree(core_data->vmcs);
 		atomic_inc(&failure_count);
-		return 1;
+		err = 1;
+		goto out;
 	}
 	core_data->vmxon_region_phys = virt_to_phys(core_data->vmxon_region);
 
 	core_load_status = rustyvisor_core_load(core_data);
 	if (core_load_status != 0) {
 		atomic_inc(&failure_count);
+		err = 1;
+		goto out;
 	}
+
+out:
+	put_cpu_ptr(per_core_data);
 	up(&init_lock);
-	return 0;
+	return err;
 }
 
 
 int rustyvisor_loader_core_unload(void *_) {
-	struct core_data *core_data = get_cpu_ptr(&per_core_data);
+	struct core_data *core_data = get_cpu_ptr(per_core_data);
 
 	rustyvisor_core_unload();
-	up(&init_lock);
 	kfree(core_data->vmcs);
 	kfree(core_data->vmxon_region);
-	printk("unloading up\n");
+	put_cpu_ptr(per_core_data);
+	up(&init_lock);
 	return 0;
 }
 
@@ -100,7 +107,7 @@ static int __init rustyvisor_init(void) {
 		down(&init_lock);
 	}
 
-	down(&semaphore);
+	down(&init_lock);
 
 	err = atomic_read(&failure_count);
 	if (err != 0) {
@@ -130,7 +137,7 @@ static void __exit rustyvisor_exit(void) {
 		down(&init_lock);
 	}
 
-	down(&semaphore);
+	down(&init_lock);
 
 	rustyvisor_unload();
 }
