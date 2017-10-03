@@ -9,8 +9,6 @@
 #define MB (0x1000 * KB)
 #define HEAP_SIZE (256 * KB)
 
-
-// FIXME: Use linux per core data macros
 struct core_data {
 	void *vmxon_region;
 	void *vmcs;
