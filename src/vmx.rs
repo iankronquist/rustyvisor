@@ -713,7 +713,7 @@ fn prepare_vmx_memory_region(vmx_region: *mut u8, vmx_region_size: usize) {
 
     for i in mem::size_of::<u32>()..vmx_region_size {
         unsafe {
-            *vmx_region_dwords.offset(i as isize) = 0;
+            *vmx_region.offset(i as isize) = 0;
         }
     }
 }
