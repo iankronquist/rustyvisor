@@ -128,10 +128,9 @@ static void __exit rustyvisor_exit(void) {
 		task = kthread_create(rustyvisor_loader_core_unload, NULL, "rustyvisor_core_unload");
 		kthread_bind(task, cpu);
 
-		wake_up_process(task);
-		put_cpu_ptr(core_data);
-
 		down(&init_lock);
+
+		wake_up_process(task);
 	}
 
 	down(&init_lock);
