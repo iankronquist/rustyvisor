@@ -102,7 +102,7 @@ pub enum VMCSField {
     GuestCSSelector = 0x00000802,
     GuestSSSelector = 0x00000804,
     GuestDSSelector = 0x00000806,
-    GuestFSelector = 0x00000808,
+    GuestFSSelector = 0x00000808,
     GuestGSSelector = 0x0000080a,
     GuestLDTRSelector = 0x0000080c,
     GuestTrSelector = 0x0000080e,
@@ -112,7 +112,7 @@ pub enum VMCSField {
     HostCSSelector = 0x00000c02,
     HostSSSelector = 0x00000c04,
     HostDSSelector = 0x00000c06,
-    HostFSelector = 0x00000c08,
+    HostFSSelector = 0x00000c08,
     HostGSSelector = 0x00000c0a,
     HostTrSelector = 0x00000c0c,
     IOBitmapA = 0x00002000,
@@ -211,7 +211,7 @@ pub enum VMCSField {
     GuestCSLimit = 0x00004802,
     GuestSSLimit = 0x00004804,
     GuestDSLimit = 0x00004806,
-    GuestFsLimit = 0x00004808,
+    GuestFSLimit = 0x00004808,
     GuestGSLimit = 0x0000480a,
     GuestLDTRLimit = 0x0000480c,
     GuestTrLimit = 0x0000480e,
@@ -247,7 +247,7 @@ pub enum VMCSField {
     GuestCSBase = 0x00006808,
     GuestSSBase = 0x0000680a,
     GuestDSBase = 0x0000680c,
-    GuestFsBase = 0x0000680e,
+    GuestFSBase = 0x0000680e,
     GuestGSBase = 0x00006810,
     GuestLDTRBase = 0x00006812,
     GuestTRBase = 0x00006814,
@@ -489,22 +489,6 @@ pub fn vmresume() -> Result<(), u32> {
     if ret == 0 { Ok(()) } else { Err(ret) }
 }
 
-macro_rules! clear_carry_bit {
-    () => (
-        unsafe {
-            asm!("clc" : : : "flags");
-        }
-    )
-}
-
-macro_rules! set_carry_bit {
-    () => (
-        unsafe {
-            asm!("clc" : : : "flags");
-        }
-    )
-}
-
 pub fn read_cs() -> u16 {
     let ret: u16;
     unsafe {
@@ -581,6 +565,19 @@ pub fn read_gs() -> u16 {
             );
     }
     ret
+}
+
+pub fn read_tr() -> u16 {
+    let ret: u16;
+    unsafe {
+        asm!(
+            "str $0"
+            : "=r"(ret)
+            :
+            :
+            );
+    }
+    ret as u16
 }
 
 pub fn write_cs(val: u16) {
@@ -872,28 +869,74 @@ fn vmcs_initialize_host_state() -> Result<(), u32> {
     Ok(())
 }
 
+fn vmcs_initialize_guest_segment_fields(gdt: *const segmentation::GDTEntry, segment: u16, access_field: VMCSField, limit_field: VMCSField, base_field: VMCSField, segment_field: VMCSField) -> Result<(), u32> {
+    let long_mode_bit: u8 = 1 << 5;
+    let access: u64;
+    let limit: u64;
+    let mut base: u64;
+    let index = (segment >> 3) as isize;
+    unsafe {
+        info!("GDT Entry {:x} {} \n\t{:?}", segment, index, *gdt.offset(index));
+
+        access = (((*gdt.offset(index)).access as u64) << 8) |
+                 (((*gdt.offset(index)).granularity & 0xf0) as u64);
+
+        limit = ((((*gdt.offset(index)).granularity & 0x0f) as u64) << 32) |
+                  ((*gdt.offset(index)).limit_low as u64);
+
+        base = (((*gdt.offset(index)).base_high    as u64) << 24) |
+               (((*gdt.offset(index)).base_middle  as u64) << 16) |
+                ((*gdt.offset(index)).base_low     as u64);
+
+        if ((*gdt.offset(index)).granularity & long_mode_bit) != 0 {
+            info!("\t64 bit segment");
+            base |= ((*gdt.offset(index)).base_highest as u64) << 32;
+        }
+    }
+    vmwrite(access_field, access)?;
+    vmwrite(limit_field, limit)?;
+    vmwrite(base_field, base)?;
+    vmwrite(segment_field, segment as u64)
+}
+
 fn vmcs_initialize_guest_state(rsp: u64, rip: u64) -> Result<(), u32> {
+    let mut idtr: interrupts::IDTDescriptor = Default::default();
+    interrupts::sidt(&mut idtr);
+    let mut gdtr: segmentation::GDTDescriptor = Default::default();
+    segmentation::sgdt(&mut gdtr);
+    let mut ldtr: segmentation::GDTDescriptor = Default::default();
+    segmentation::sldt(&mut ldtr);
+    let gdt: *const segmentation::GDTEntry = gdtr.base as *const segmentation::GDTEntry;
+
+
     vmwrite(VMCSField::GuestCR0, read_cr0())?;
     vmwrite(VMCSField::GuestCR3, read_cr3())?;
     vmwrite(VMCSField::GuestCR4, read_cr4())?;
     vmwrite(VMCSField::GuestDR7, read_db7())?;
 
+
     vmwrite(VMCSField::GuestRSP, rsp)?;
     vmwrite(VMCSField::GuestRIP, rip)?;
-    set_carry_bit!();
-    vmwrite(VMCSField::GuestRFlags, read_flags())?;
+    vmwrite(VMCSField::GuestRFlags, read_flags() | FLAGS_CARRY_BIT)?;
 
-    // cs,ss,ds,es,fs,gs,ldtr,tr
 
-    let mut idtr: interrupts::IDTDescriptor = Default::default();
-    interrupts::sidt(&mut idtr);
+    vmcs_initialize_guest_segment_fields(gdt, read_ss(), VMCSField::GuestSSArBytes, VMCSField::GuestSSLimit, VMCSField::GuestSSBase, VMCSField::GuestSSSelector)?;
+    vmcs_initialize_guest_segment_fields(gdt, read_cs(), VMCSField::GuestCSArBytes, VMCSField::GuestCSLimit, VMCSField::GuestCSBase, VMCSField::GuestCSSelector)?;
+    vmcs_initialize_guest_segment_fields(gdt, read_ds(), VMCSField::GuestDSArBytes, VMCSField::GuestDSLimit, VMCSField::GuestDSBase, VMCSField::GuestDSSelector)?;
+    vmcs_initialize_guest_segment_fields(gdt, read_es(), VMCSField::GuestESArBytes, VMCSField::GuestESLimit, VMCSField::GuestESBase, VMCSField::GuestESSelector)?;
+    vmcs_initialize_guest_segment_fields(gdt, read_fs(), VMCSField::GuestFSArBytes, VMCSField::GuestFSLimit, VMCSField::GuestFSBase, VMCSField::GuestFSSelector)?;
+    vmcs_initialize_guest_segment_fields(gdt, read_gs(), VMCSField::GuestGSArBytes, VMCSField::GuestGSLimit, VMCSField::GuestGSBase, VMCSField::GuestGSSelector)?;
+    vmcs_initialize_guest_segment_fields(gdt, read_tr(), VMCSField::GuestTRArBytes, VMCSField::GuestTrLimit, VMCSField::GuestTRBase, VMCSField::GuestTrSelector)?;
+
+
     vmwrite(VMCSField::GuestIDTRLimit, idtr.limit as u64)?;
     vmwrite(VMCSField::GuestIDTRBase, idtr.base)?;
 
-    let mut gdtr: segmentation::GDTDescriptor = Default::default();
-    segmentation::sgdt(&mut gdtr);
     vmwrite(VMCSField::GuestGDTRLimit, gdtr.limit as u64)?;
     vmwrite(VMCSField::GuestGDTRBase, gdtr.base)?;
+
+    vmwrite(VMCSField::GuestLDTRLimit, ldtr.limit as u64)?;
+    vmwrite(VMCSField::GuestLDTRBase, ldtr.base)?;
 
 
     vmwrite(VMCSField::VMCSLinkPointer,  0xffffffff_ffffffff)?;
@@ -929,28 +972,32 @@ macro_rules! read_rbp {
     )
 }
 
-// If this was a function it would just return its own address, which is silly.
-macro_rules! read_rip {
-    () => (
-        unsafe {
-            let rip: u64;
-            asm!("lea (%rip), $0;" : "=r"(rip));
-            rip
-        }
-    )
+fn is_in_vm() -> (bool, u64) {
+    let rip: u64;
+    let rflags: u64;
+    unsafe {
+        asm!(
+            "clc             # Clear carry bit.
+                             # Before entering the VM, we set the carry bit.
+                             # We will enter the VM at the next instruction.
+                             # If the carry bit is set after the next instruction,
+                             # we must be in a VM.
+                             # This hack is borrowed from SimpleVisor.
+             lea 0(%rip), $0 # Save the rip so we can start the vm right here.
+             pushf           # Push the flags to the stack so we can inspect them.
+             pop $1          # Get the flags.
+        "
+        : "=r"(rip), "=r"(rflags)
+        );
+    }
+    ((rflags & FLAGS_CARRY_BIT) != 0, rip)
 }
 
 pub fn load_vm(vmcs: *mut u8, vmcs_phys: u64, vmcs_size: usize) -> Result<(), ()> {
 
-    // FIXME: Should this all be in a single chunk of asm so they compiler
-    // doesn't mess shit up?
     let rbp = read_rbp!();
-    clear_carry_bit!();
-    // We will resume here with the carry bit set if the VM is launched
-    // successfully.
-    let rip = read_rip!();
-    if (read_flags() & FLAGS_CARRY_BIT) == 0 {
-        // We are in the VM!
+    let (in_vm, rip) = is_in_vm();
+    if in_vm {
         return Ok(());
     }
 
