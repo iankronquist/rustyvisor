@@ -1023,12 +1023,12 @@ pub fn disable() {
 
 // This must be a macro because otherwise the value will be perturbed by the
 // function prologue.
-macro_rules! read_rbp {
+macro_rules! read_rsp {
     () => (
         unsafe {
-            let rbp: u64;
-            asm!("mov %rbp, $0;" : "=r"(rbp));
-            rbp
+            let rsp: u64;
+            asm!("mov %rsp, $0;" : "=r"(rsp));
+            rsp
         }
     )
 }
@@ -1056,7 +1056,7 @@ fn is_in_vm() -> (bool, u64) {
 
 pub fn load_vm(vmcs: *mut u8, vmcs_phys: u64, vmcs_size: usize) -> Result<(), ()> {
 
-    let rbp = read_rbp!();
+    let rsp = read_rsp!();
     let (in_vm, rip) = is_in_vm();
     if in_vm {
         return Ok(());
@@ -1079,7 +1079,7 @@ pub fn load_vm(vmcs: *mut u8, vmcs_phys: u64, vmcs_size: usize) -> Result<(), ()
         return Err(());
     }
 
-    if vmcs_initialize_guest_state(rbp, rip) != Ok(()) {
+    if vmcs_initialize_guest_state(rsp, rip) != Ok(()) {
         return Err(());
     }
     vmcs_initialize_vm_control_values();
