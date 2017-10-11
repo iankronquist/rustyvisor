@@ -336,7 +336,7 @@ pub fn vmwrite(field: VMCSField, val: u64) -> Result<(), u32> {
     unsafe {
         asm!(
             "xor %eax, %eax; \
-             vmread $2, $1; \
+             vmwriteq $2, $1; \
              setc %ah; \
              setz %al;"
              : "={eax}"(ret)
