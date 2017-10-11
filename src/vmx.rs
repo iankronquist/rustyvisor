@@ -907,7 +907,7 @@ fn vmcs_initialize_guest_segment_fields(
         // The byte we call `granularity` also has nibble of the limit stuffed
         // in, which we need to mask out.
         access = ((((*gdt.offset(index)).granularity & 0xf0) as u64) << 8) |
-                   ((*gdt.offset(index)).access as u64);
+            ((*gdt.offset(index)).access as u64);
 
         // The limit is split into a u16 and another nibble stashed in the
         // `granularity` field.
