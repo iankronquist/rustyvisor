@@ -1,19 +1,20 @@
-use core::mem;
-use cli;
+//use core::mem;
 
+#[derive(Debug)]
 #[repr(packed)]
 #[allow(dead_code)]
-struct GDTEntry {
-    limit_low: u16,
-    base_low: u16,
-    base_middle: u8,
-    access: u8,
-    granularity: u8,
-    base_high: u8,
-    base_highest: u32,
-    reserved0: u32,
+pub struct GDTEntry {
+    pub limit_low: u16,
+    pub base_low: u16,
+    pub base_middle: u8,
+    pub access: u8,
+    pub granularity: u8,
+    pub base_high: u8,
+    pub base_highest: u32,
+    pub reserved0: u32,
 }
 
+/*
 pub fn lgdt(gdt_desc: *const GDTDescriptor) {
     unsafe {
         asm!(
@@ -24,6 +25,7 @@ pub fn lgdt(gdt_desc: *const GDTDescriptor) {
             );
     }
 }
+*/
 
 pub fn sgdt(gdt_desc: *mut GDTDescriptor) {
     unsafe {
@@ -36,6 +38,19 @@ pub fn sgdt(gdt_desc: *mut GDTDescriptor) {
     }
 }
 
+pub fn sldt(ldt_desc: *mut GDTDescriptor) {
+    unsafe {
+        asm!(
+            "sldt ($0)"
+            :
+            : "r"(ldt_desc)
+            :
+            );
+    }
+}
+
+
+/*
 const GDT: [GDTEntry; 3] = [GDTEntry {
                                 limit_low: 0,
                                 base_low: 0,
@@ -66,6 +81,7 @@ const GDT: [GDTEntry; 3] = [GDTEntry {
                                 base_highest: 0,
                                 reserved0: 0,
                             }];
+                            */
 
 #[derive(Default)]
 #[repr(packed)]
@@ -74,6 +90,7 @@ pub struct GDTDescriptor {
     pub base: u64,
 }
 
+/*
 impl<'a> GDTDescriptor {
     pub fn new() -> cli::ClearLocalInterrupts<GDTDescriptor> {
         cli::ClearLocalInterrupts::new(GDTDescriptor {
@@ -113,3 +130,4 @@ pub mod runtime_tests {
         orig_gdt_desc.cli().load();
     }
 }
+*/

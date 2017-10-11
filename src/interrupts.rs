@@ -1,10 +1,11 @@
-use dispatch_table::{DispatchTable, DispatchFn};
-use spin::RwLock;
-use core::mem;
-use cli;
-use isr;
+//use dispatch_table::{DispatchTable, DispatchFn};
+//use spin::RwLock;
+//use core::mem;
+//use cli;
+//use isr;
 
 
+/*
 #[derive(Copy, Clone, Default)]
 #[repr(packed)]
 struct IDTEntry {
@@ -60,6 +61,7 @@ pub fn lidt(idt_desc: *const IDTDescriptor) {
             );
     }
 }
+*/
 
 
 pub fn sidt(idt_desc: *mut IDTDescriptor) {
@@ -73,6 +75,7 @@ pub fn sidt(idt_desc: *mut IDTDescriptor) {
     }
 }
 
+/*
 impl IDT {
     fn set_entry(&mut self, num: usize, base: u64, selector: u16, flags: u8) {
         self.0[num].base_low = (base & 0xffff) as u16;
@@ -144,6 +147,7 @@ pub fn init_interrupt_handlers() {
         register_interrupt_handler(i, isr::ISR[i as usize], default_handler);
     }
 }
+*/
 
 
 #[derive(Default)]
@@ -154,6 +158,7 @@ pub struct IDTDescriptor {
 }
 
 
+/*
 impl<'a> IDTDescriptor {
     pub fn new() -> cli::ClearLocalInterrupts<IDTDescriptor> {
         cli::ClearLocalInterrupts::new(IDTDescriptor {
@@ -196,3 +201,4 @@ pub mod runtime_tests {
         orig_idt_desc.cli().load();
     }
 }
+*/
