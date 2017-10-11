@@ -103,5 +103,6 @@ pub extern "C" fn rustyvisor_unload() {
 #[cfg(feature = "runtime_tests")]
 fn runtime_tests() {
     info!("Executing runtime tests...");
+    segmentation::runtime_tests::run();
     info!("Runtime tests succeeded");
 }

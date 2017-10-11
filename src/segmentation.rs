@@ -1,4 +1,4 @@
-//use core::mem;
+use core::mem;
 
 #[derive(Debug)]
 #[repr(packed)]
@@ -14,7 +14,6 @@ pub struct GDTEntry {
     pub reserved0: u32,
 }
 
-/*
 pub fn lgdt(gdt_desc: *const GDTDescriptor) {
     unsafe {
         asm!(
@@ -25,7 +24,6 @@ pub fn lgdt(gdt_desc: *const GDTDescriptor) {
             );
     }
 }
-*/
 
 pub fn sgdt(gdt_desc: *mut GDTDescriptor) {
     unsafe {
@@ -50,7 +48,6 @@ pub fn sldt(ldt_desc: *mut GDTDescriptor) {
 }
 
 
-/*
 const GDT: [GDTEntry; 3] = [GDTEntry {
                                 limit_low: 0,
                                 base_low: 0,
@@ -81,7 +78,6 @@ const GDT: [GDTEntry; 3] = [GDTEntry {
                                 base_highest: 0,
                                 reserved0: 0,
                             }];
-                            */
 
 #[derive(Default)]
 #[repr(packed)]
@@ -90,19 +86,18 @@ pub struct GDTDescriptor {
     pub base: u64,
 }
 
-/*
 impl<'a> GDTDescriptor {
-    pub fn new() -> cli::ClearLocalInterrupts<GDTDescriptor> {
-        cli::ClearLocalInterrupts::new(GDTDescriptor {
+    pub fn new() -> GDTDescriptor {
+        GDTDescriptor {
             limit: (mem::size_of::<[GDTEntry; 3]>() - 1) as u16,
             base: GDT.as_ptr() as u64,
-        })
+        }
     }
 
-    pub fn from_cpu() -> cli::ClearLocalInterrupts<GDTDescriptor> {
+    pub fn from_cpu() -> GDTDescriptor {
         let mut current_gdt_ptr: GDTDescriptor = Default::default();
         sgdt(&mut current_gdt_ptr);
-        cli::ClearLocalInterrupts::new(current_gdt_ptr)
+        current_gdt_ptr
     }
 
     pub fn load(&self) {
@@ -113,21 +108,18 @@ impl<'a> GDTDescriptor {
 #[cfg(feature = "runtime_tests")]
 pub mod runtime_tests {
 
-    use cli;
     use super::GDTDescriptor;
 
     pub fn run() {
         info!("Executing GDT tests...");
         test_load_and_restore_gdt();
-        assert!(cli::are_interrupts_enabled());
         info!("GDT tests succeeded");
     }
 
     fn test_load_and_restore_gdt() {
         let orig_gdt_desc = GDTDescriptor::from_cpu();
         let gdt_desc = GDTDescriptor::new();
-        gdt_desc.cli().load();
-        orig_gdt_desc.cli().load();
+        gdt_desc.load();
+        orig_gdt_desc.load();
     }
 }
-*/
