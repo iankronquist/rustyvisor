@@ -858,10 +858,10 @@ pub fn enable(
     // FIXME: Fix error types
     if result == Ok(()) {
         info!("vmxon succeeded");
-        return Ok(());
+        Ok(())
     } else {
         error!("vmxon failed");
-        return Err(());
+        Err(())
     }
 }
 
