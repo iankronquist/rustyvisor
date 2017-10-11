@@ -12,6 +12,8 @@ extern crate spin;
 
 pub mod vmx;
 pub mod runtime;
+mod segmentation;
+mod interrupts;
 
 #[cfg(not(test))]
 mod serial_logger;
