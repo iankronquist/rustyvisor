@@ -869,6 +869,9 @@ fn vmcs_initialize_host_state() -> Result<(), u32> {
     Ok(())
 }
 
+// See figure 3-8, Vol. 3A Sect. 3.4.5 and table 24-2, Vol. 3A Sect 24.4.1 for
+// the gory details of the layouts of the GDT entries and VMCS access rights
+// fields respectively.
 fn vmcs_initialize_guest_segment_fields(
     gdt: *const segmentation::GDTEntry,
     segment: u16,
@@ -877,31 +880,49 @@ fn vmcs_initialize_guest_segment_fields(
     base_field: VMCSField,
     segment_field: VMCSField,
 ) -> Result<(), u32> {
+    // Labeled "L" in figure 3-8.
     let long_mode_bit: u8 = 1 << 5;
     let access: u64;
     let limit: u64;
     let mut base: u64;
+    // See figure 3-6.
+    // Bottom 2 bits are used for the requested privilege level, and the third
+    // bit used to denote whether it's an LDT segment or a GDT segment. The
+    // rest are the index into the GDT.
     let index = (segment >> 3) as isize;
+
+    // For backwards compatibility with processors from the prehistoric
+    // era, the GDT entry layout is a mess. This is exacerbated by the fact
+    // that Rust doesn't have struct bitfields.
+    // Unpack all of the parts of the GDT entry so we can write them to the VMCS.
     unsafe {
-        info!(
+        debug!(
             "GDT Entry {:x} {} \n\t{:?}",
             segment,
             index,
             *gdt.offset(index)
         );
 
-        access = (((*gdt.offset(index)).access as u64) << 8) |
-            (((*gdt.offset(index)).granularity & 0xf0) as u64);
+        // The access rights are split up into two bytes.
+        // The byte we call `granularity` also has nibble of the limit stuffed
+        // in, which we need to mask out.
+        access = ((((*gdt.offset(index)).granularity & 0xf0) as u64) << 8) |
+                   ((*gdt.offset(index)).access as u64);
 
+        // The limit is split into a u16 and another nibble stashed in the
+        // `granularity` field.
         limit = ((((*gdt.offset(index)).granularity & 0x0f) as u64) << 32) |
             ((*gdt.offset(index)).limit_low as u64);
 
+        // The base is stashed in four fields. The highest dword is only used
+        // for long mode (64 bit) segments.
         base = (((*gdt.offset(index)).base_high as u64) << 24) |
             (((*gdt.offset(index)).base_middle as u64) << 16) |
             ((*gdt.offset(index)).base_low as u64);
 
+        // If this is a long mode segment, read the "base_highest" field.
         if ((*gdt.offset(index)).granularity & long_mode_bit) != 0 {
-            info!("\t64 bit segment");
+            debug!("\t64 bit segment");
             base |= ((*gdt.offset(index)).base_highest as u64) << 32;
         }
     }
