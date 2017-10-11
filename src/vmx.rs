@@ -1,4 +1,6 @@
 use core::mem;
+use interrupts;
+use segmentation;
 
 #[repr(u32)]
 pub enum MSR {
@@ -22,6 +24,11 @@ pub enum MSR {
     Ia32VmxTrueExitCtls = 0x0000048f,
     Ia32VmxTrueEntryCtls = 0x00000490,
     Ia32VmxVmFunc = 0x00000491,
+    Ia32DebugCtlMSR = 0x000001d9,
+    Ia32SysenterCS = 0x00000174,
+    Ia32SysenterESP = 0x00000175,
+    Ia32SysenterEIP = 0x00000176,
+    Ia32SMBase = 0x0000009e,
 }
 
 fn vm_instruction_error_number_message(n: u64) -> &'static str {
@@ -70,6 +77,8 @@ fn vm_instruction_error_number_message(n: u64) -> &'static str {
         _ => "Unknown VM instruction error number.",
     }
 }
+
+const FLAGS_CARRY_BIT: u64 = 1;
 
 const IA32_FEATURE_CONTROL_LOCK_BIT: u32 = (1 << 0);
 const IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT: u32 = (1 << 2);
@@ -146,8 +155,8 @@ pub enum VMCSField {
     TSXMultiplierHigh = 0x00002033,
     GuestPhysicalAddress = 0x00002400,
     GuestPhysicalAddressHigh = 0x00002401,
-    VMcsLinkPointer = 0x00002800,
-    VMcsLinkPointerHigh = 0x00002801,
+    VMCSLinkPointer = 0x00002800,
+    VMCSLinkPointerHigh = 0x00002801,
     GuestIA32Debugctl = 0x00002802,
     GuestIA32DebugctlHigh = 0x00002803,
     GuestIA32Pat = 0x00002804,
@@ -478,6 +487,22 @@ pub fn vmresume() -> Result<(), u32> {
             );
     }
     if ret == 0 { Ok(()) } else { Err(ret) }
+}
+
+macro_rules! clear_carry_bit {
+    () => (
+        unsafe {
+            asm!("clc" : : : "flags");
+        }
+    )
+}
+
+macro_rules! set_carry_bit {
+    () => (
+        unsafe {
+            asm!("clc" : : : "flags");
+        }
+    )
 }
 
 pub fn read_cs() -> u16 {
@@ -843,9 +868,44 @@ pub fn enable(
     }
 }
 
-fn vmcs_initialize_host_state() {}
+fn vmcs_initialize_host_state() -> Result<(), u32> {
+    Ok(())
+}
 
-fn vmcs_initialize_guest_state() {}
+fn vmcs_initialize_guest_state(rsp: u64, rip: u64) -> Result<(), u32> {
+    vmwrite(VMCSField::GuestCR0, read_cr0())?;
+    vmwrite(VMCSField::GuestCR3, read_cr3())?;
+    vmwrite(VMCSField::GuestCR4, read_cr4())?;
+    vmwrite(VMCSField::GuestDR7, read_db7())?;
+
+    vmwrite(VMCSField::GuestRSP, rsp)?;
+    vmwrite(VMCSField::GuestRIP, rip)?;
+    set_carry_bit!();
+    vmwrite(VMCSField::GuestRFlags, read_flags())?;
+
+    // cs,ss,ds,es,fs,gs,ldtr,tr
+
+    let mut idtr: interrupts::IDTDescriptor = Default::default();
+    interrupts::sidt(&mut idtr);
+    vmwrite(VMCSField::GuestIDTRLimit, idtr.limit as u64)?;
+    vmwrite(VMCSField::GuestIDTRBase, idtr.base)?;
+
+    let mut gdtr: segmentation::GDTDescriptor = Default::default();
+    segmentation::sgdt(&mut gdtr);
+    vmwrite(VMCSField::GuestGDTRLimit, gdtr.limit as u64)?;
+    vmwrite(VMCSField::GuestGDTRBase, gdtr.base)?;
+
+
+    vmwrite(VMCSField::VMCSLinkPointer,  0xffffffff_ffffffff)?;
+
+    vmwrite(VMCSField::GuestIA32Debugctl, rdmsrl(MSR::Ia32DebugCtlMSR))?;
+
+    vmwrite(VMCSField::GuestSysenterCS, rdmsrl(MSR::Ia32SysenterCS))?;
+    vmwrite(VMCSField::GuestSysenterESP, rdmsrl(MSR::Ia32SysenterESP))?;
+    vmwrite(VMCSField::GuestSysenterEIP, rdmsrl(MSR::Ia32SysenterEIP))?;
+
+    Ok(())
+}
 
 fn vmcs_initialize_vm_control_values() {
     // Simon, this is your place to ☆shine☆!
@@ -857,7 +917,42 @@ pub fn disable() {
     info!("vmxoff");
 }
 
+// This must be a macro because otherwise the value will be perturbed by the
+// function prologue.
+macro_rules! read_rbp {
+    () => (
+        unsafe {
+            let rbp: u64;
+            asm!("mov %rbp, $0;" : "=r"(rbp));
+            rbp
+        }
+    )
+}
+
+// If this was a function it would just return its own address, which is silly.
+macro_rules! read_rip {
+    () => (
+        unsafe {
+            let rip: u64;
+            asm!("lea (%rip), $0;" : "=r"(rip));
+            rip
+        }
+    )
+}
+
 pub fn load_vm(vmcs: *mut u8, vmcs_phys: u64, vmcs_size: usize) -> Result<(), ()> {
+
+    // FIXME: Should this all be in a single chunk of asm so they compiler
+    // doesn't mess shit up?
+    let rbp = read_rbp!();
+    clear_carry_bit!();
+    // We will resume here with the carry bit set if the VM is launched
+    // successfully.
+    let rip = read_rip!();
+    if (read_flags() & FLAGS_CARRY_BIT) == 0 {
+        // We are in the VM!
+        return Ok(());
+    }
 
     assert!(is_page_aligned(vmcs as u64));
     assert!(is_page_aligned(vmcs_phys));
@@ -872,8 +967,13 @@ pub fn load_vm(vmcs: *mut u8, vmcs_phys: u64, vmcs_size: usize) -> Result<(), ()
         return Err(());
     }
 
-    vmcs_initialize_host_state();
-    vmcs_initialize_guest_state();
+    if vmcs_initialize_host_state() != Ok(()) {
+        return Err(());
+    }
+
+    if vmcs_initialize_guest_state(rbp, rip) != Ok(()) {
+        return Err(());
+    }
     vmcs_initialize_vm_control_values();
 
     if vmlaunch() != Ok(()) {
