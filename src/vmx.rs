@@ -756,6 +756,82 @@ pub fn read_flags() -> u64 {
     ret
 }
 
+#[naked]
+unsafe fn vmx_handle_vmexit() {
+    asm!("
+    push %rax
+    push %rbx
+    push %rcx
+    push %rdx
+    push %rbp
+    push %rsi
+    push %rdi
+    push %r8
+    push %r9
+    push %r10
+    push %r11
+    push %r12
+    push %r13
+    push %r14
+    push %r15
+    push %rsp
+
+    movq %rsp, %rdi
+
+    call vmx_dispatch
+
+    # Remove rsp from stack.
+    add $$8, %rsp
+
+    # Restore general purpose registers
+    pop %r15
+    pop %r14
+    pop %r13
+    pop %r12
+    pop %r11
+    pop %r10
+    pop %r9
+    pop %r8
+    pop %rdi
+    pop %rsi
+    pop %rbp
+    pop %rdx
+    pop %rcx
+    pop %rbx
+    pop %rax
+    vmresume
+
+    # We shouldn't get here.
+    movq $$0, %rax
+    setc %ah
+    setz %al
+    movq %rax, %rdi
+    jmp vmx_vmresume_failure
+    ");
+}
+
+// Used by inline assembly.
+#[allow(dead_code)]
+#[no_mangle]
+pub extern "C" fn vmx_dispatch(_vm_register_state_ptr: u64) {
+    match vmread(VMCSField::VMExitReason) {
+        Ok(reason) => {
+            info!("VM Exit reason number {}", reason);
+
+        },
+        Err(value) => {
+            info!("Failed to VMRead VMExit {}", value);
+        }
+    };
+}
+
+// Used by inline assembly.
+#[allow(dead_code)]
+#[no_mangle]
+pub extern "C" fn vmx_vmresume_failure(_error: u64) -> !{
+    panic!("VMResume failed!");
+}
+
 
 fn vmx_available() -> bool {
     let (_eax, _ebx, ecx, _edx) = cpuid(CPUIDLeaf::ProcessorInfoAndFeatures as u32);
@@ -865,7 +941,7 @@ pub fn enable(
     }
 }
 
-fn vmcs_initialize_host_state(rsp: u64, rip: u64) -> Result<(), u32> {
+fn vmcs_initialize_host_state(host_stack_base: u64, host_stack_size: usize, rip: u64) -> Result<(), u32> {
     let mut idtr: interrupts::IDTDescriptor = Default::default();
     interrupts::sidt(&mut idtr);
     let mut gdtr: segmentation::GDTDescriptor = Default::default();
@@ -877,7 +953,7 @@ fn vmcs_initialize_host_state(rsp: u64, rip: u64) -> Result<(), u32> {
     vmwrite(VMCSField::HostCR3, read_cr3())?;
     vmwrite(VMCSField::HostCR4, read_cr4())?;
 
-    vmwrite(VMCSField::HostRSP, rsp)?;
+    vmwrite(VMCSField::HostRSP, host_stack_base + host_stack_size as u64)?;
     vmwrite(VMCSField::HostRIP, rip)?;
 
     vmwrite(VMCSField::HostSSSelector, read_ss() as u64)?;
@@ -1138,7 +1214,7 @@ fn is_in_vm() -> (bool, u64) {
     ((rflags & FLAGS_CARRY_BIT) != 0, rip)
 }
 
-pub fn load_vm(vmcs: *mut u8, vmcs_phys: u64, vmcs_size: usize) -> Result<(), ()> {
+pub fn load_vm(vmcs: *mut u8, vmcs_phys: u64, vmcs_size: usize, host_stack: *mut u8, host_stack_size: usize) -> Result<(), ()> {
 
     let rsp = read_rsp!();
     let (in_vm, rip) = is_in_vm();
@@ -1159,7 +1235,7 @@ pub fn load_vm(vmcs: *mut u8, vmcs_phys: u64, vmcs_size: usize) -> Result<(), ()
         return Err(());
     }
 
-    if vmcs_initialize_host_state(0, 0) != Ok(()) {
+    if vmcs_initialize_host_state(host_stack as u64, host_stack_size, vmx_handle_vmexit as u64) != Ok(()) {
         return Err(());
     }
 
