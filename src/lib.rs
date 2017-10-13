@@ -74,7 +74,14 @@ pub extern "C" fn rustyvisor_core_load(data: *const PerCoreData) -> i32 {
     }
 
     unsafe {
-        if vmx::load_vm((*data).vmcs, (*data).vmcs_phys, (*data).vmcs_size, (*data).host_stack, (*data).host_stack_size) != Ok(()) {
+        if vmx::load_vm(
+            (*data).vmcs,
+            (*data).vmcs_phys,
+            (*data).vmcs_size,
+            (*data).host_stack,
+            (*data).host_stack_size,
+        ) != Ok(())
+        {
             error!("Failed to load VMX");
             return 1;
         }
