@@ -1021,13 +1021,19 @@ fn vmcs_initialize_guest_state(rsp: u64, rip: u64) -> Result<(), u32> {
     vmwrite(VMCSField::GuestLDTRBase, ldtr.base)?;
 
 
-    vmwrite(VMCSField::VMCSLinkPointer, 0xffffffff_ffffffff)?;
-
     vmwrite(VMCSField::GuestIA32Debugctl, rdmsrl(MSR::Ia32DebugCtlMSR))?;
 
     vmwrite(VMCSField::GuestSysenterCS, rdmsrl(MSR::Ia32SysenterCS))?;
     vmwrite(VMCSField::GuestSysenterESP, rdmsrl(MSR::Ia32SysenterESP))?;
     vmwrite(VMCSField::GuestSysenterEIP, rdmsrl(MSR::Ia32SysenterEIP))?;
+
+
+    // Non-register state
+
+    vmwrite(VMCSField::GuestActivityState, 0)?;
+    vmwrite(VMCSField::GuestInterruptibilityInfo, 0)?;
+    vmwrite(VMCSField::GuestPendingDbgExceptions, 0)?;
+    vmwrite(VMCSField::VMCSLinkPointer, !0)?;
 
     Ok(())
 }
