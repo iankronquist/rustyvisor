@@ -7,7 +7,7 @@ make
 make test
 cargo clippy -- -D clippy || true
 cargo fmt -- --write-mode diff
-bash ./scripts/printer.sh
+bash printer.sh
 dmesg
 sudo insmod rustyvisor.ko
 dmesg
