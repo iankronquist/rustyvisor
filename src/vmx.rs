@@ -938,11 +938,11 @@ fn vmcs_initialize_host_state() -> Result<(), u32> {
 // See figure 3-8, Vol. 3A Sect. 3.4.5 and table 24-2, Vol. 3A Sect 24.4.1 for
 // the gory details of the layouts of the GDT entries and VMCS access rights
 // fields respectively.
-fn vmcs_initialize_guest_segment_fields(
+fn vmcs_initialize_segment_fields(
     gdt: *const segmentation::GDTEntry,
     segment: u16,
-    access_field: VMCSField,
-    limit_field: VMCSField,
+    maybe_access_field: Option<VMCSField>,
+    maybe_limit_field: Option<VMCSField>,
     base_field: VMCSField,
     segment_field: VMCSField,
 ) -> Result<(), u32> {
@@ -992,8 +992,12 @@ fn vmcs_initialize_guest_segment_fields(
             base |= ((*gdt.offset(index)).base_highest as u64) << 32;
         }
     }
-    vmwrite(access_field, access)?;
-    vmwrite(limit_field, limit)?;
+    if let Some(access_field) = maybe_access_field {
+        vmwrite(access_field, access)?;
+    }
+    if let Some(limit_field) = maybe_limit_field {
+        vmwrite(limit_field, limit)?;
+    }
     vmwrite(base_field, base)?;
     vmwrite(segment_field, segment as u64)
 }
@@ -1019,59 +1023,59 @@ fn vmcs_initialize_guest_state(rsp: u64, rip: u64) -> Result<(), u32> {
     vmwrite(VMCSField::GuestRFlags, read_flags() | FLAGS_CARRY_BIT)?;
 
 
-    vmcs_initialize_guest_segment_fields(
+    vmcs_initialize_segment_fields(
         gdt,
         read_ss(),
-        VMCSField::GuestSSArBytes,
-        VMCSField::GuestSSLimit,
+        Some(VMCSField::GuestSSArBytes),
+        Some(VMCSField::GuestSSLimit),
         VMCSField::GuestSSBase,
         VMCSField::GuestSSSelector,
     )?;
-    vmcs_initialize_guest_segment_fields(
+    vmcs_initialize_segment_fields(
         gdt,
         read_cs(),
-        VMCSField::GuestCSArBytes,
-        VMCSField::GuestCSLimit,
+        Some(VMCSField::GuestCSArBytes),
+        Some(VMCSField::GuestCSLimit),
         VMCSField::GuestCSBase,
         VMCSField::GuestCSSelector,
     )?;
-    vmcs_initialize_guest_segment_fields(
+    vmcs_initialize_segment_fields(
         gdt,
         read_ds(),
-        VMCSField::GuestDSArBytes,
-        VMCSField::GuestDSLimit,
+        Some(VMCSField::GuestDSArBytes),
+        Some(VMCSField::GuestDSLimit),
         VMCSField::GuestDSBase,
         VMCSField::GuestDSSelector,
     )?;
-    vmcs_initialize_guest_segment_fields(
+    vmcs_initialize_segment_fields(
         gdt,
         read_es(),
-        VMCSField::GuestESArBytes,
-        VMCSField::GuestESLimit,
+        Some(VMCSField::GuestESArBytes),
+        Some(VMCSField::GuestESLimit),
         VMCSField::GuestESBase,
         VMCSField::GuestESSelector,
     )?;
-    vmcs_initialize_guest_segment_fields(
+    vmcs_initialize_segment_fields(
         gdt,
         read_fs(),
-        VMCSField::GuestFSArBytes,
-        VMCSField::GuestFSLimit,
+        Some(VMCSField::GuestFSArBytes),
+        Some(VMCSField::GuestFSLimit),
         VMCSField::GuestFSBase,
         VMCSField::GuestFSSelector,
     )?;
-    vmcs_initialize_guest_segment_fields(
+    vmcs_initialize_segment_fields(
         gdt,
         read_gs(),
-        VMCSField::GuestGSArBytes,
-        VMCSField::GuestGSLimit,
+        Some(VMCSField::GuestGSArBytes),
+        Some(VMCSField::GuestGSLimit),
         VMCSField::GuestGSBase,
         VMCSField::GuestGSSelector,
     )?;
-    vmcs_initialize_guest_segment_fields(
+    vmcs_initialize_segment_fields(
         gdt,
         read_tr(),
-        VMCSField::GuestTRArBytes,
-        VMCSField::GuestTrLimit,
+        Some(VMCSField::GuestTRArBytes),
+        Some(VMCSField::GuestTrLimit),
         VMCSField::GuestTRBase,
         VMCSField::GuestTrSelector,
     )?;
