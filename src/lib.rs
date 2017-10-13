@@ -1,5 +1,6 @@
 #![no_std]
 #![feature(asm)]
+#![feature(naked_functions)]
 #![feature(const_fn)]
 #![feature(use_extern_macros)]
 #![feature(lang_items)]
@@ -28,10 +29,12 @@ include!(concat!(env!("OUT_DIR"), "/version.rs"));
 pub struct PerCoreData {
     vmxon_region: *mut u8,
     vmcs: *mut u8,
+    host_stack: *mut u8,
     vmxon_region_phys: u64,
     vmcs_phys: u64,
     vmxon_region_size: usize,
     vmcs_size: usize,
+    host_stack_size: usize,
     loaded_successfully: bool,
 }
 
@@ -71,7 +74,7 @@ pub extern "C" fn rustyvisor_core_load(data: *const PerCoreData) -> i32 {
     }
 
     unsafe {
-        if vmx::load_vm((*data).vmcs, (*data).vmcs_phys, (*data).vmcs_size) != Ok(()) {
+        if vmx::load_vm((*data).vmcs, (*data).vmcs_phys, (*data).vmcs_size, (*data).host_stack, (*data).host_stack_size) != Ok(()) {
             error!("Failed to load VMX");
             return 1;
         }
