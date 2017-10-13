@@ -8,14 +8,17 @@
 #define KB (0x1000)
 #define MB (0x1000 * KB)
 #define HEAP_SIZE (256 * KB)
+#define HOST_STACK_SIZE (4 * KB)
 
 struct core_data {
 	void *vmxon_region;
 	void *vmcs;
+	void *host_stack;
 	u64 vmxon_region_phys;
 	u64 vmcs_phys;
 	size_t vmxon_region_size;
 	size_t vmcs_size;
+	size_t host_stack_size;
 	bool loaded_successfully;
 };
 
@@ -59,6 +62,14 @@ int rustyvisor_loader_core_load(void *_) {
 	}
 	core_data->vmxon_region_phys = virt_to_phys(core_data->vmxon_region);
 
+	core_data->host_stack_size = HOST_STACK_SIZE;
+	core_data->host_stack = kmalloc(core_data->host_stack_size, GFP_KERNEL);
+	if (core_data->host_stack == NULL) {
+		atomic_inc(&failure_count);
+		err = 1;
+		goto out;
+	}
+
 	core_load_status = rustyvisor_core_load(core_data);
 	if (core_load_status != 0) {
 		atomic_inc(&failure_count);
@@ -79,6 +90,7 @@ int rustyvisor_loader_core_unload(void *_) {
 	rustyvisor_core_unload();
 	kfree(core_data->vmcs);
 	kfree(core_data->vmxon_region);
+	kfree(core_data->host_stack);
 	put_cpu_ptr(&per_core_data);
 	up(&init_lock);
 	return 0;
