@@ -758,7 +758,8 @@ pub fn read_flags() -> u64 {
 
 #[naked]
 unsafe fn vmx_handle_vmexit() {
-    asm!("
+    asm!(
+        "
     push %rax
     push %rbx
     push %rcx
@@ -807,7 +808,8 @@ unsafe fn vmx_handle_vmexit() {
     setz %al
     movq %rax, %rdi
     jmp vmx_vmresume_failure
-    ");
+    "
+    );
 }
 
 // Used by inline assembly.
@@ -818,7 +820,7 @@ pub extern "C" fn vmx_dispatch(_vm_register_state_ptr: u64) {
         Ok(reason) => {
             info!("VM Exit reason number {}", reason);
 
-        },
+        }
         Err(value) => {
             info!("Failed to VMRead VMExit {}", value);
         }
@@ -828,7 +830,7 @@ pub extern "C" fn vmx_dispatch(_vm_register_state_ptr: u64) {
 // Used by inline assembly.
 #[allow(dead_code)]
 #[no_mangle]
-pub extern "C" fn vmx_vmresume_failure(_error: u64) -> !{
+pub extern "C" fn vmx_vmresume_failure(_error: u64) -> ! {
     panic!("VMResume failed!");
 }
 
@@ -941,7 +943,11 @@ pub fn enable(
     }
 }
 
-fn vmcs_initialize_host_state(host_stack_base: u64, host_stack_size: usize, rip: u64) -> Result<(), u32> {
+fn vmcs_initialize_host_state(
+    host_stack_base: u64,
+    host_stack_size: usize,
+    rip: u64,
+) -> Result<(), u32> {
     let mut idtr: interrupts::IDTDescriptor = Default::default();
     interrupts::sidt(&mut idtr);
     let mut gdtr: segmentation::GDTDescriptor = Default::default();
@@ -1214,7 +1220,13 @@ fn is_in_vm() -> (bool, u64) {
     ((rflags & FLAGS_CARRY_BIT) != 0, rip)
 }
 
-pub fn load_vm(vmcs: *mut u8, vmcs_phys: u64, vmcs_size: usize, host_stack: *mut u8, host_stack_size: usize) -> Result<(), ()> {
+pub fn load_vm(
+    vmcs: *mut u8,
+    vmcs_phys: u64,
+    vmcs_size: usize,
+    host_stack: *mut u8,
+    host_stack_size: usize,
+) -> Result<(), ()> {
 
     let rsp = read_rsp!();
     let (in_vm, rip) = is_in_vm();
@@ -1235,7 +1247,12 @@ pub fn load_vm(vmcs: *mut u8, vmcs_phys: u64, vmcs_size: usize, host_stack: *mut
         return Err(());
     }
 
-    if vmcs_initialize_host_state(host_stack as u64, host_stack_size, vmx_handle_vmexit as u64) != Ok(()) {
+    if vmcs_initialize_host_state(
+        host_stack as u64,
+        host_stack_size,
+        vmx_handle_vmexit as u64,
+    ) != Ok(())
+    {
         return Err(());
     }
 
