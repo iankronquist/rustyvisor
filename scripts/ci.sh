@@ -8,5 +8,5 @@ make test
 cargo clippy -- -D clippy || true
 cargo fmt -- --write-mode diff
 dmesg -w &
-insmod rustyvisor.ko
-rmmod rustyvisor.ko
+sudo insmod rustyvisor.ko
+sudo rmmod rustyvisor.ko
