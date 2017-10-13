@@ -931,7 +931,60 @@ pub fn enable(
     }
 }
 
-fn vmcs_initialize_host_state() -> Result<(), u32> {
+fn vmcs_initialize_host_state(rsp: u64, rip: u64) -> Result<(), u32> {
+    let mut idtr: interrupts::IDTDescriptor = Default::default();
+    interrupts::sidt(&mut idtr);
+    let mut gdtr: segmentation::GDTDescriptor = Default::default();
+    segmentation::sgdt(&mut gdtr);
+    let gdt: *const segmentation::GDTEntry = gdtr.base as *const segmentation::GDTEntry;
+
+
+    vmwrite(VMCSField::HostCR0, read_cr0())?;
+    vmwrite(VMCSField::HostCR3, read_cr3())?;
+    vmwrite(VMCSField::HostCR4, read_cr4())?;
+
+    vmwrite(VMCSField::HostRSP, rsp)?;
+    vmwrite(VMCSField::HostRIP, rip)?;
+
+    vmwrite(VMCSField::HostSSSelector, read_ss() as u64)?;
+    vmwrite(VMCSField::HostCSSelector, read_cs() as u64)?;
+    vmwrite(VMCSField::HostDSSelector, read_ds() as u64)?;
+    vmwrite(VMCSField::HostESSelector, read_es() as u64)?;
+    vmcs_initialize_segment_fields(
+        gdt,
+        read_fs(),
+        None,
+        None,
+        VMCSField::HostFSBase,
+        VMCSField::HostFSSelector,
+    )?;
+    vmcs_initialize_segment_fields(
+        gdt,
+        read_gs(),
+        None,
+        None,
+        VMCSField::HostGSBase,
+        VMCSField::HostGSSelector,
+    )?;
+    vmcs_initialize_segment_fields(
+        gdt,
+        read_tr(),
+        None,
+        None,
+        VMCSField::HostTRBase,
+        VMCSField::HostTrSelector,
+    )?;
+
+    vmwrite(VMCSField::HostIDTRBase, idtr.base)?;
+    vmwrite(VMCSField::HostGDTRBase, gdtr.base)?;
+
+    // No syscalls from the host, please!
+    vmwrite(VMCSField::HostIA32SysenterCS, 0)?;
+    vmwrite(VMCSField::HostIA32SysenterESP, 0)?;
+    vmwrite(VMCSField::HostIA32SysenterEIP, 0)?;
+
+    // FIXME: On vmexit, do we need to restore the task register??
+
     Ok(())
 }
 
@@ -1222,7 +1275,7 @@ pub fn load_vm(vmcs: *mut u8, vmcs_phys: u64, vmcs_size: usize) -> Result<(), ()
         return Err(());
     }
 
-    if vmcs_initialize_host_state() != Ok(()) {
+    if vmcs_initialize_host_state(0, 0) != Ok(()) {
         return Err(());
     }
 
