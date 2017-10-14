@@ -47,6 +47,18 @@ pub fn sldt(ldt_desc: *mut GDTDescriptor) {
     }
 }
 
+const LIMIT_LOW: u16 = !0;
+
+const LIMIT_HIGH_NIBBLE: u8 = 0x00ff;
+const LONG_MODE: u8 = 1 << 5;
+const GRANULARITY_4K: u8 = 1 << 7;
+
+const ACCESS_WRITABLE: u8 = 1 << 1;
+const ACCESS_CODE: u8 = 1 << 3;
+const ACCESS_SET_HIGH: u8 = 1 << 4;
+const ACCESS_PRESENT: u8 = 1 << 7;
+
+
 
 const GDT: [GDTEntry; 3] = [
     GDTEntry {
@@ -59,22 +71,24 @@ const GDT: [GDTEntry; 3] = [
         base_highest: 0,
         reserved0: 0,
     },
+    // Ring 0 data segment.
     GDTEntry {
-        limit_low: 0xffff,
+        limit_low: LIMIT_LOW,
         base_low: 0,
         base_middle: 0,
-        access: 0b10101001,
-        granularity: 0b11110111,
+        access: ACCESS_PRESENT | ACCESS_SET_HIGH | ACCESS_WRITABLE,
+        granularity: GRANULARITY_4K | LIMIT_HIGH_NIBBLE,
         base_high: 0,
         base_highest: 0,
         reserved0: 0,
     },
+    // Ring 0 code segment.
     GDTEntry {
-        limit_low: 0xffff,
+        limit_low: LIMIT_LOW,
         base_low: 0,
         base_middle: 0,
-        access: 0b00101001,
-        granularity: 0b11110111,
+        access: ACCESS_PRESENT | ACCESS_SET_HIGH | ACCESS_CODE | ACCESS_WRITABLE,
+        granularity: GRANULARITY_4K | LONG_MODE | LIMIT_HIGH_NIBBLE,
         base_high: 0,
         base_highest: 0,
         reserved0: 0,
