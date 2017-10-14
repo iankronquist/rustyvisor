@@ -1,4 +1,6 @@
 use core::mem;
+use interrupts;
+use segmentation;
 
 #[repr(u32)]
 pub enum MSR {
@@ -22,6 +24,11 @@ pub enum MSR {
     Ia32VmxTrueExitCtls = 0x0000048f,
     Ia32VmxTrueEntryCtls = 0x00000490,
     Ia32VmxVmFunc = 0x00000491,
+    Ia32DebugCtlMSR = 0x000001d9,
+    Ia32SysenterCS = 0x00000174,
+    Ia32SysenterESP = 0x00000175,
+    Ia32SysenterEIP = 0x00000176,
+    Ia32SMBase = 0x0000009e,
 }
 
 fn vm_instruction_error_number_message(n: u64) -> &'static str {
@@ -71,6 +78,8 @@ fn vm_instruction_error_number_message(n: u64) -> &'static str {
     }
 }
 
+const FLAGS_CARRY_BIT: u64 = 1;
+
 const IA32_FEATURE_CONTROL_LOCK_BIT: u32 = (1 << 0);
 const IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT: u32 = (1 << 2);
 
@@ -93,7 +102,7 @@ pub enum VMCSField {
     GuestCSSelector = 0x00000802,
     GuestSSSelector = 0x00000804,
     GuestDSSelector = 0x00000806,
-    GuestFSelector = 0x00000808,
+    GuestFSSelector = 0x00000808,
     GuestGSSelector = 0x0000080a,
     GuestLDTRSelector = 0x0000080c,
     GuestTrSelector = 0x0000080e,
@@ -103,7 +112,7 @@ pub enum VMCSField {
     HostCSSelector = 0x00000c02,
     HostSSSelector = 0x00000c04,
     HostDSSelector = 0x00000c06,
-    HostFSelector = 0x00000c08,
+    HostFSSelector = 0x00000c08,
     HostGSSelector = 0x00000c0a,
     HostTrSelector = 0x00000c0c,
     IOBitmapA = 0x00002000,
@@ -146,8 +155,8 @@ pub enum VMCSField {
     TSXMultiplierHigh = 0x00002033,
     GuestPhysicalAddress = 0x00002400,
     GuestPhysicalAddressHigh = 0x00002401,
-    VMcsLinkPointer = 0x00002800,
-    VMcsLinkPointerHigh = 0x00002801,
+    VMCSLinkPointer = 0x00002800,
+    VMCSLinkPointerHigh = 0x00002801,
     GuestIA32Debugctl = 0x00002802,
     GuestIA32DebugctlHigh = 0x00002803,
     GuestIA32Pat = 0x00002804,
@@ -202,7 +211,7 @@ pub enum VMCSField {
     GuestCSLimit = 0x00004802,
     GuestSSLimit = 0x00004804,
     GuestDSLimit = 0x00004806,
-    GuestFsLimit = 0x00004808,
+    GuestFSLimit = 0x00004808,
     GuestGSLimit = 0x0000480a,
     GuestLDTRLimit = 0x0000480c,
     GuestTrLimit = 0x0000480e,
@@ -238,7 +247,7 @@ pub enum VMCSField {
     GuestCSBase = 0x00006808,
     GuestSSBase = 0x0000680a,
     GuestDSBase = 0x0000680c,
-    GuestFsBase = 0x0000680e,
+    GuestFSBase = 0x0000680e,
     GuestGSBase = 0x00006810,
     GuestLDTRBase = 0x00006812,
     GuestTRBase = 0x00006814,
@@ -336,7 +345,7 @@ pub fn vmwrite(field: VMCSField, val: u64) -> Result<(), u32> {
     unsafe {
         asm!(
             "xor %eax, %eax; \
-             vmread $2, $1; \
+             vmwriteq $2, $1; \
              setc %ah; \
              setz %al;"
              : "={eax}"(ret)
@@ -556,6 +565,19 @@ pub fn read_gs() -> u16 {
             );
     }
     ret
+}
+
+pub fn read_tr() -> u16 {
+    let ret: u16;
+    unsafe {
+        asm!(
+            "str $0"
+            : "=r"(ret)
+            :
+            :
+            );
+    }
+    ret as u16
 }
 
 pub fn write_cs(val: u16) {
@@ -836,16 +858,185 @@ pub fn enable(
     // FIXME: Fix error types
     if result == Ok(()) {
         info!("vmxon succeeded");
-        return Ok(());
+        Ok(())
     } else {
         error!("vmxon failed");
-        return Err(());
+        Err(())
     }
 }
 
-fn vmcs_initialize_host_state() {}
+fn vmcs_initialize_host_state() -> Result<(), u32> {
+    Ok(())
+}
 
-fn vmcs_initialize_guest_state() {}
+// See figure 3-8, Vol. 3A Sect. 3.4.5 and table 24-2, Vol. 3A Sect 24.4.1 for
+// the gory details of the layouts of the GDT entries and VMCS access rights
+// fields respectively.
+fn vmcs_initialize_guest_segment_fields(
+    gdt: *const segmentation::GDTEntry,
+    segment: u16,
+    access_field: VMCSField,
+    limit_field: VMCSField,
+    base_field: VMCSField,
+    segment_field: VMCSField,
+) -> Result<(), u32> {
+    // Labeled "L" in figure 3-8.
+    let long_mode_bit: u8 = 1 << 5;
+    let access: u64;
+    let limit: u64;
+    let mut base: u64;
+    // See figure 3-6.
+    // Bottom 2 bits are used for the requested privilege level, and the third
+    // bit used to denote whether it's an LDT segment or a GDT segment. The
+    // rest are the index into the GDT.
+    let index = (segment >> 3) as isize;
+
+    // For backwards compatibility with processors from the prehistoric
+    // era, the GDT entry layout is a mess. This is exacerbated by the fact
+    // that Rust doesn't have struct bitfields.
+    // Unpack all of the parts of the GDT entry so we can write them to the VMCS.
+    unsafe {
+        debug!(
+            "GDT Entry {:x} {} \n\t{:?}",
+            segment,
+            index,
+            *gdt.offset(index)
+        );
+
+        // The access rights are split up into two bytes.
+        // The byte we call `granularity` also has nibble of the limit stuffed
+        // in, which we need to mask out.
+        access = ((((*gdt.offset(index)).granularity & 0xf0) as u64) << 8) |
+            ((*gdt.offset(index)).access as u64);
+
+        // The limit is split into a u16 and another nibble stashed in the
+        // `granularity` field.
+        limit = ((((*gdt.offset(index)).granularity & 0x0f) as u64) << 32) |
+            ((*gdt.offset(index)).limit_low as u64);
+
+        // The base is stashed in four fields. The highest dword is only used
+        // for long mode (64 bit) segments.
+        base = (((*gdt.offset(index)).base_high as u64) << 24) |
+            (((*gdt.offset(index)).base_middle as u64) << 16) |
+            ((*gdt.offset(index)).base_low as u64);
+
+        // If this is a long mode segment, read the "base_highest" field.
+        if ((*gdt.offset(index)).granularity & long_mode_bit) != 0 {
+            debug!("\t64 bit segment");
+            base |= ((*gdt.offset(index)).base_highest as u64) << 32;
+        }
+    }
+    vmwrite(access_field, access)?;
+    vmwrite(limit_field, limit)?;
+    vmwrite(base_field, base)?;
+    vmwrite(segment_field, segment as u64)
+}
+
+fn vmcs_initialize_guest_state(rsp: u64, rip: u64) -> Result<(), u32> {
+    let mut idtr: interrupts::IDTDescriptor = Default::default();
+    interrupts::sidt(&mut idtr);
+    let mut gdtr: segmentation::GDTDescriptor = Default::default();
+    segmentation::sgdt(&mut gdtr);
+    let mut ldtr: segmentation::GDTDescriptor = Default::default();
+    segmentation::sldt(&mut ldtr);
+    let gdt: *const segmentation::GDTEntry = gdtr.base as *const segmentation::GDTEntry;
+
+
+    vmwrite(VMCSField::GuestCR0, read_cr0())?;
+    vmwrite(VMCSField::GuestCR3, read_cr3())?;
+    vmwrite(VMCSField::GuestCR4, read_cr4())?;
+    vmwrite(VMCSField::GuestDR7, read_db7())?;
+
+
+    vmwrite(VMCSField::GuestRSP, rsp)?;
+    vmwrite(VMCSField::GuestRIP, rip)?;
+    vmwrite(VMCSField::GuestRFlags, read_flags() | FLAGS_CARRY_BIT)?;
+
+
+    vmcs_initialize_guest_segment_fields(
+        gdt,
+        read_ss(),
+        VMCSField::GuestSSArBytes,
+        VMCSField::GuestSSLimit,
+        VMCSField::GuestSSBase,
+        VMCSField::GuestSSSelector,
+    )?;
+    vmcs_initialize_guest_segment_fields(
+        gdt,
+        read_cs(),
+        VMCSField::GuestCSArBytes,
+        VMCSField::GuestCSLimit,
+        VMCSField::GuestCSBase,
+        VMCSField::GuestCSSelector,
+    )?;
+    vmcs_initialize_guest_segment_fields(
+        gdt,
+        read_ds(),
+        VMCSField::GuestDSArBytes,
+        VMCSField::GuestDSLimit,
+        VMCSField::GuestDSBase,
+        VMCSField::GuestDSSelector,
+    )?;
+    vmcs_initialize_guest_segment_fields(
+        gdt,
+        read_es(),
+        VMCSField::GuestESArBytes,
+        VMCSField::GuestESLimit,
+        VMCSField::GuestESBase,
+        VMCSField::GuestESSelector,
+    )?;
+    vmcs_initialize_guest_segment_fields(
+        gdt,
+        read_fs(),
+        VMCSField::GuestFSArBytes,
+        VMCSField::GuestFSLimit,
+        VMCSField::GuestFSBase,
+        VMCSField::GuestFSSelector,
+    )?;
+    vmcs_initialize_guest_segment_fields(
+        gdt,
+        read_gs(),
+        VMCSField::GuestGSArBytes,
+        VMCSField::GuestGSLimit,
+        VMCSField::GuestGSBase,
+        VMCSField::GuestGSSelector,
+    )?;
+    vmcs_initialize_guest_segment_fields(
+        gdt,
+        read_tr(),
+        VMCSField::GuestTRArBytes,
+        VMCSField::GuestTrLimit,
+        VMCSField::GuestTRBase,
+        VMCSField::GuestTrSelector,
+    )?;
+
+
+    vmwrite(VMCSField::GuestIDTRLimit, idtr.limit as u64)?;
+    vmwrite(VMCSField::GuestIDTRBase, idtr.base)?;
+
+    vmwrite(VMCSField::GuestGDTRLimit, gdtr.limit as u64)?;
+    vmwrite(VMCSField::GuestGDTRBase, gdtr.base)?;
+
+    vmwrite(VMCSField::GuestLDTRLimit, ldtr.limit as u64)?;
+    vmwrite(VMCSField::GuestLDTRBase, ldtr.base)?;
+
+
+    vmwrite(VMCSField::GuestIA32Debugctl, rdmsrl(MSR::Ia32DebugCtlMSR))?;
+
+    vmwrite(VMCSField::GuestSysenterCS, rdmsrl(MSR::Ia32SysenterCS))?;
+    vmwrite(VMCSField::GuestSysenterESP, rdmsrl(MSR::Ia32SysenterESP))?;
+    vmwrite(VMCSField::GuestSysenterEIP, rdmsrl(MSR::Ia32SysenterEIP))?;
+
+
+    // Non-register state
+
+    vmwrite(VMCSField::GuestActivityState, 0)?;
+    vmwrite(VMCSField::GuestInterruptibilityInfo, 0)?;
+    vmwrite(VMCSField::GuestPendingDbgExceptions, 0)?;
+    vmwrite(VMCSField::VMCSLinkPointer, !0)?;
+
+    Ok(())
+}
 
 fn vmcs_initialize_vm_control_values() {
     // Simon, this is your place to ☆shine☆!
@@ -857,7 +1048,46 @@ pub fn disable() {
     info!("vmxoff");
 }
 
+// This must be a macro because otherwise the value will be perturbed by the
+// function prologue.
+macro_rules! read_rsp {
+    () => (
+        unsafe {
+            let rsp: u64;
+            asm!("mov %rsp, $0;" : "=r"(rsp));
+            rsp
+        }
+    )
+}
+
+fn is_in_vm() -> (bool, u64) {
+    let rip: u64;
+    let rflags: u64;
+    unsafe {
+        asm!(
+            "clc             # Clear carry bit.
+                             # Before entering the VM, we set the carry bit.
+                             # We will enter the VM at the next instruction.
+                             # If the carry bit is set after the next instruction,
+                             # we must be in a VM.
+                             # This hack is borrowed from SimpleVisor.
+             lea 0(%rip), $0 # Save the rip so we can start the vm right here.
+             pushf           # Push the flags to the stack so we can inspect them.
+             pop $1          # Get the flags.
+        "
+        : "=r"(rip), "=r"(rflags)
+        );
+    }
+    ((rflags & FLAGS_CARRY_BIT) != 0, rip)
+}
+
 pub fn load_vm(vmcs: *mut u8, vmcs_phys: u64, vmcs_size: usize) -> Result<(), ()> {
+
+    let rsp = read_rsp!();
+    let (in_vm, rip) = is_in_vm();
+    if in_vm {
+        return Ok(());
+    }
 
     assert!(is_page_aligned(vmcs as u64));
     assert!(is_page_aligned(vmcs_phys));
@@ -872,8 +1102,13 @@ pub fn load_vm(vmcs: *mut u8, vmcs_phys: u64, vmcs_size: usize) -> Result<(), ()
         return Err(());
     }
 
-    vmcs_initialize_host_state();
-    vmcs_initialize_guest_state();
+    if vmcs_initialize_host_state() != Ok(()) {
+        return Err(());
+    }
+
+    if vmcs_initialize_guest_state(rsp, rip) != Ok(()) {
+        return Err(());
+    }
     vmcs_initialize_vm_control_values();
 
     if vmlaunch() != Ok(()) {
