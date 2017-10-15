@@ -1105,11 +1105,11 @@ fn vmcs_initialize_guest_state(rsp: u64, rip: u64) -> Result<(), u32> {
 }
 
 fn vmcs_initialize_vm_control_values() -> Result<(), u32> {
-    let (pin_msr_0_settings, pin_msr_1_settings) = rdmsr(MSR::Ia32VmxPinBasedCtls);
-    let (proc_msr_0_settings, proc_msr_1_settings) = rdmsr(MSR::Ia32VmxProcBasedCtls);
-    let (secondary_proc_msr_0_settings, secondary_proc_msr_1_settings) = rdmsr(MSR::Ia32VmxProcBasedCtls2);
-    let (entry_msr_0_settings, entry_msr_1_settings) = rdmsr(MSR::Ia32VmxEntryCtls);
-    let (exit_msr_0_settings, exit_msr_1_settings) = rdmsr(MSR::Ia32VmxExitCtls);
+    let (pin_msr_1_settings, pin_msr_0_settings) = rdmsr(MSR::Ia32VmxPinBasedCtls);
+    let (proc_msr_1_settings, proc_msr_0_settings) = rdmsr(MSR::Ia32VmxProcBasedCtls);
+    let (secondary_proc_msr_1_settings, secondary_proc_msr_0_settings) = rdmsr(MSR::Ia32VmxProcBasedCtls2);
+    let (entry_msr_1_settings, entry_msr_0_settings) = rdmsr(MSR::Ia32VmxEntryCtls);
+    let (exit_msr_1_settings, exit_msr_0_settings) = rdmsr(MSR::Ia32VmxExitCtls);
 
     let pin_settings: u32 = pin_msr_0_settings | (pin_msr_1_settings & 0);
     let proc_settings: u32 = proc_msr_0_settings | (proc_msr_1_settings & SECONDARY_ENABLE);
