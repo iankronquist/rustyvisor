@@ -94,6 +94,9 @@ pub const TSC_SCALING_ENABLE: u32 = 1 << 25;
 pub const X64_MODE: u32 = 1 << 9;
 pub const INTERRUPT_ACKNOWLEDGE: u32 = 1 << 15;
 
+pub const VM_ENTRY_FAILURE: u64 = 1 << 31;
+
+
 // VM Entry controls
 // bit 9 is also toggles IA-32e mode, so we can use the same constant
 
@@ -884,8 +887,11 @@ unsafe fn vmx_handle_vmexit() {
 pub extern "C" fn vmx_dispatch(_vm_register_state_ptr: u64) {
     match vmread(VMCSField::VMExitReason) {
         Ok(reason) => {
-            info!("VM Exit reason number {}", reason);
-
+            // FIXME handle VM Entry failure
+            info!("VM Exit reason number {:#x}", reason);
+            if reason & VM_ENTRY_FAILURE != 0 {
+                panic!("VM Entry failure");
+            }
         }
         Err(value) => {
             info!("Failed to VMRead VMExit {}", value);
@@ -1348,6 +1354,7 @@ pub fn load_vm(
     let rsp = read_rsp!();
     let (in_vm, rip) = is_in_vm();
     if in_vm {
+        info!("Successfully entered VM!");
         return Ok(());
     }
 
