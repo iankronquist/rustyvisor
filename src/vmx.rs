@@ -894,7 +894,7 @@ pub extern "C" fn vmx_dispatch(_vm_register_state_ptr: u64) {
             }
         }
         Err(value) => {
-            info!("Failed to VMRead VMExit {}", value);
+            error!("Failed to VMRead VMExit {}", value);
         }
     };
 }
@@ -1007,7 +1007,7 @@ pub fn enable(
     let result = vmxon(vmxon_region_phys);
     // FIXME: Fix error types
     if result == Ok(()) {
-        info!("vmxon succeeded");
+        debug!("vmxon succeeded");
         Ok(())
     } else {
         error!("vmxon failed");
@@ -1135,12 +1135,15 @@ fn vmcs_initialize_segment_fields(
         }
     }
     if let Some(access_field) = maybe_access_field {
+        debug!("Access: {:#x}", access);
         vmwrite(access_field, access)?;
     }
     if let Some(limit_field) = maybe_limit_field {
+        debug!("Limit: {:#x}", limit);
         vmwrite(limit_field, limit)?;
     }
     vmwrite(base_field, base)?;
+    debug!("Segment: {:#x}", segment);
     vmwrite(segment_field, segment as u64)
 }
 
@@ -1165,6 +1168,7 @@ fn vmcs_initialize_guest_state(rsp: u64, rip: u64) -> Result<(), u32> {
     vmwrite(VMCSField::GuestRFlags, read_flags() | FLAGS_CARRY_BIT)?;
 
 
+    debug!("ss");
     vmcs_initialize_segment_fields(
         gdt,
         read_ss(),
@@ -1173,6 +1177,7 @@ fn vmcs_initialize_guest_state(rsp: u64, rip: u64) -> Result<(), u32> {
         VMCSField::GuestSSBase,
         VMCSField::GuestSSSelector,
     )?;
+    debug!("cs");
     vmcs_initialize_segment_fields(
         gdt,
         read_cs(),
@@ -1181,6 +1186,7 @@ fn vmcs_initialize_guest_state(rsp: u64, rip: u64) -> Result<(), u32> {
         VMCSField::GuestCSBase,
         VMCSField::GuestCSSelector,
     )?;
+    debug!("ds");
     vmcs_initialize_segment_fields(
         gdt,
         read_ds(),
@@ -1189,6 +1195,7 @@ fn vmcs_initialize_guest_state(rsp: u64, rip: u64) -> Result<(), u32> {
         VMCSField::GuestDSBase,
         VMCSField::GuestDSSelector,
     )?;
+    debug!("es");
     vmcs_initialize_segment_fields(
         gdt,
         read_es(),
@@ -1197,6 +1204,7 @@ fn vmcs_initialize_guest_state(rsp: u64, rip: u64) -> Result<(), u32> {
         VMCSField::GuestESBase,
         VMCSField::GuestESSelector,
     )?;
+    debug!("fs");
     vmcs_initialize_segment_fields(
         gdt,
         read_fs(),
@@ -1205,6 +1213,7 @@ fn vmcs_initialize_guest_state(rsp: u64, rip: u64) -> Result<(), u32> {
         VMCSField::GuestFSBase,
         VMCSField::GuestFSSelector,
     )?;
+    debug!("gs");
     vmcs_initialize_segment_fields(
         gdt,
         read_gs(),
@@ -1213,6 +1222,7 @@ fn vmcs_initialize_guest_state(rsp: u64, rip: u64) -> Result<(), u32> {
         VMCSField::GuestGSBase,
         VMCSField::GuestGSSelector,
     )?;
+    debug!("tr");
     vmcs_initialize_segment_fields(
         gdt,
         read_tr(),
@@ -1307,7 +1317,7 @@ fn vmcs_initialize_vm_control_values() -> Result<(), u32> {
 
 pub fn disable() {
     vmxoff();
-    info!("vmxoff");
+    debug!("vmxoff");
 }
 
 // This must be a macro because otherwise the value will be perturbed by the
