@@ -1111,16 +1111,16 @@ fn vmcs_initialize_vm_control_values() -> Result<(), u32> {
     let (entry_msr_1_settings, entry_msr_0_settings) = rdmsr(MSR::Ia32VmxEntryCtls);
     let (exit_msr_1_settings, exit_msr_0_settings) = rdmsr(MSR::Ia32VmxExitCtls);
 
-    info!("Pin-based controls 0-based: {:08b}", pin_msr_0_settings);
-    info!("Pin-based controls 1-based: {:08b}", pin_msr_1_settings);
-    info!("CPU-based controls 0-based: {:032b}", proc_msr_0_settings);
-    info!("CPU-based controls 1-based: {:032b}", proc_msr_1_settings);
-    info!("Secondary CPU-based controls 0-based: {:032b}", secondary_proc_msr_0_settings);
-    info!("Secondary CPU-based controls 1-based: {:032b}", secondary_proc_msr_1_settings);
-    info!("Entry controls 0-based: {:032b}", entry_msr_0_settings);
-    info!("Entry controls 1-based: {:032b}", entry_msr_1_settings);
-    info!("Exit controls 0-based: {:032b}", exit_msr_0_settings);
-    info!("Exit controls 1-based: {:032b}", exit_msr_1_settings);
+    debug!("Pin-based controls 0-based: {:08b}", pin_msr_0_settings);
+    debug!("Pin-based controls 1-based: {:08b}", pin_msr_1_settings);
+    debug!("CPU-based controls 0-based: {:032b}", proc_msr_0_settings);
+    debug!("CPU-based controls 1-based: {:032b}", proc_msr_1_settings);
+    debug!("Secondary CPU-based controls 0-based: {:032b}", secondary_proc_msr_0_settings);
+    debug!("Secondary CPU-based controls 1-based: {:032b}", secondary_proc_msr_1_settings);
+    debug!("Entry controls 0-based: {:032b}", entry_msr_0_settings);
+    debug!("Entry controls 1-based: {:032b}", entry_msr_1_settings);
+    debug!("Exit controls 0-based: {:032b}", exit_msr_0_settings);
+    debug!("Exit controls 1-based: {:032b}", exit_msr_1_settings);
 
     let pin_settings: u32 = pin_msr_0_settings | (pin_msr_1_settings & 0);
     let proc_settings: u32 = proc_msr_0_settings | (proc_msr_1_settings & SECONDARY_ENABLE);
@@ -1128,11 +1128,11 @@ fn vmcs_initialize_vm_control_values() -> Result<(), u32> {
     let entry_settings: u32 = entry_msr_0_settings | (entry_msr_1_settings & X64_MODE);
     let exit_settings: u32 = exit_msr_0_settings | (exit_msr_1_settings & (X64_MODE | INTERRUPT_ACKNOWLEDGE));
 
-    info!("Pin-based controls: {:08b}", pin_settings);
-    info!("CPU-based controls: {:032b}", proc_settings);
-    info!("Secondary CPU-based controls: {:032b}", secondary_proc_settings);
-    info!("Entry controls: {:032b}", entry_settings);
-    info!("Exit controls: {:032b}", exit_settings);
+    debug!("Pin-based controls: {:08b}", pin_settings);
+    debug!("CPU-based controls: {:032b}", proc_settings);
+    debug!("Secondary CPU-based controls: {:032b}", secondary_proc_settings);
+    debug!("Entry controls: {:032b}", entry_settings);
+    debug!("Exit controls: {:032b}", exit_settings);
 
     vmwrite(VMCSField::PinBasedVMExecControl, pin_settings as u64)?;
     vmwrite(VMCSField::CPUBasedVMExecControl, proc_settings as u64)?;
