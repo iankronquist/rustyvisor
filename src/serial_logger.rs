@@ -67,7 +67,7 @@ impl SerialLogger {
 
 impl log::Log for SerialLogger {
     fn enabled(&self, metadata: &log::LogMetadata) -> bool {
-        metadata.level() <= log::LogLevel::Info
+        metadata.level() <= log::LogLevel::Debug
     }
 
     fn log(&self, record: &log::LogRecord) {
