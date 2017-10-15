@@ -892,7 +892,7 @@ pub extern "C" fn vmx_dispatch(_vm_register_state_ptr: u64) {
     match vmread(VMCSField::VMExitReason) {
         Ok(reason) => {
             // FIXME handle VM Entry failure
-            info!("VM Exit reason number {:#x}", reason);
+            debug!("VM Exit reason number {:#x}", reason);
             if reason & VM_ENTRY_FAILURE != 0 {
                 panic!("VM Entry failure");
             }
@@ -1147,7 +1147,6 @@ fn vmcs_initialize_segment_fields(
         vmwrite(limit_field, limit)?;
     }
     debug!("Base: {:#x}", base);
-    unsafe {debug!("Granularity {:#x} index {}", (*gdt.offset(index)).granularity, index);}
     assert!(is_canonical(base));
     vmwrite(base_field, base)?;
     debug!("Segment: {:#x}", segment);
@@ -1371,7 +1370,7 @@ pub fn load_vm(
     let rsp = read_rsp!();
     let (in_vm, rip) = is_in_vm();
     if in_vm {
-        info!("Successfully entered VM!");
+        debug!("Successfully entered VM!");
         return Ok(());
     }
 
