@@ -1018,7 +1018,7 @@ fn vmcs_initialize_host_state(
     interrupts::sidt(&mut idtr);
     let mut gdtr: segmentation::GDTDescriptor = Default::default();
     segmentation::sgdt(&mut gdtr);
-    let gdt: *const segmentation::GDTEntry = gdtr.base as *const segmentation::GDTEntry;
+    let gdt = gdtr.base as *const segmentation::GDTEntry32;
 
 
     vmwrite(VMCSField::HostCR0, read_cr0())?;
@@ -1074,7 +1074,7 @@ fn vmcs_initialize_host_state(
 // the gory details of the layouts of the GDT entries and VMCS access rights
 // fields respectively.
 fn vmcs_initialize_segment_fields(
-    gdt: *const segmentation::GDTEntry,
+    gdt: *const segmentation::GDTEntry32,
     segment: u16,
     maybe_access_field: Option<VMCSField>,
     maybe_limit_field: Option<VMCSField>,
@@ -1122,9 +1122,10 @@ fn vmcs_initialize_segment_fields(
             ((*gdt.offset(index)).base_low as u64);
 
         // If this is a long mode segment, read the "base_highest" field.
-        if ((*gdt.offset(index)).granularity & long_mode_bit) != 0 {
-            debug!("\t64 bit segment");
-            base |= ((*gdt.offset(index)).base_highest as u64) << 32;
+        if ((*gdt.offset(index)).access & system_access_bit) != 0 {
+            let entry64 = gdt.offset(index) as *const segmentation::GDTEntry64;
+            debug!("64 bit segment");
+            base |= ((*entry64).base_highest as u64) << 32;
         }
     }
     if let Some(access_field) = maybe_access_field {
@@ -1144,7 +1145,7 @@ fn vmcs_initialize_guest_state(rsp: u64, rip: u64) -> Result<(), u32> {
     segmentation::sgdt(&mut gdtr);
     let mut ldtr: segmentation::GDTDescriptor = Default::default();
     segmentation::sldt(&mut ldtr);
-    let gdt: *const segmentation::GDTEntry = gdtr.base as *const segmentation::GDTEntry;
+    let gdt = gdtr.base as *const segmentation::GDTEntry32;
 
 
     vmwrite(VMCSField::GuestCR0, read_cr0())?;

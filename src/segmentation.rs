@@ -3,7 +3,7 @@ use core::mem;
 #[derive(Debug)]
 #[repr(packed)]
 #[allow(dead_code)]
-pub struct GDTEntry {
+pub struct GDTEntry64 {
     pub limit_low: u16,
     pub base_low: u16,
     pub base_middle: u8,
@@ -13,6 +13,19 @@ pub struct GDTEntry {
     pub base_highest: u32,
     pub reserved0: u32,
 }
+
+#[derive(Debug)]
+#[repr(packed)]
+#[allow(dead_code)]
+pub struct GDTEntry32 {
+    pub limit_low: u16,
+    pub base_low: u16,
+    pub base_middle: u8,
+    pub access: u8,
+    pub granularity: u8,
+    pub base_high: u8,
+}
+
 
 pub fn lgdt(gdt_desc: *const GDTDescriptor) {
     unsafe {
@@ -60,8 +73,8 @@ const ACCESS_PRESENT: u8 = 1 << 7;
 
 
 
-const GDT: [GDTEntry; 3] = [
-    GDTEntry {
+const GDT: [GDTEntry64; 3] = [
+    GDTEntry64 {
         limit_low: 0,
         base_low: 0,
         base_middle: 0,
@@ -72,7 +85,7 @@ const GDT: [GDTEntry; 3] = [
         reserved0: 0,
     },
     // Ring 0 data segment.
-    GDTEntry {
+    GDTEntry64 {
         limit_low: LIMIT_LOW,
         base_low: 0,
         base_middle: 0,
@@ -83,7 +96,7 @@ const GDT: [GDTEntry; 3] = [
         reserved0: 0,
     },
     // Ring 0 code segment.
-    GDTEntry {
+    GDTEntry64 {
         limit_low: LIMIT_LOW,
         base_low: 0,
         base_middle: 0,
@@ -105,7 +118,7 @@ pub struct GDTDescriptor {
 impl<'a> GDTDescriptor {
     pub fn new() -> GDTDescriptor {
         GDTDescriptor {
-            limit: (mem::size_of::<[GDTEntry; 3]>() - 1) as u16,
+            limit: (mem::size_of::<[GDTEntry64; 3]>() - 1) as u16,
             base: GDT.as_ptr() as u64,
         }
     }
