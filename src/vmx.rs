@@ -1112,7 +1112,7 @@ fn vmcs_initialize_segment_fields(
 
         // The limit is split into a u16 and another nibble stashed in the
         // `granularity` field.
-        limit = ((((*gdt.offset(index)).granularity & 0x0f) as u64) << 32) |
+        limit = ((((*gdt.offset(index)).granularity & 0x0f) as u64) << 16) |
             ((*gdt.offset(index)).limit_low as u64);
 
         // The base is stashed in four fields. The highest dword is only used
