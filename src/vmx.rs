@@ -643,7 +643,7 @@ pub fn read_tr() -> u16 {
             :
             );
     }
-    ret as u16
+    ret
 }
 
 pub fn write_cs(val: u16) {
