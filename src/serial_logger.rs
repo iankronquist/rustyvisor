@@ -74,7 +74,7 @@ impl log::Log for SerialLogger {
         if self.enabled(record.metadata()) {
             let _ = write!(
                 SERIAL_PORT_MUTEX.lock(),
-                "{}: {}\n",
+                "{}: {}\r\n",
                 record.level(),
                 record.args()
             );
