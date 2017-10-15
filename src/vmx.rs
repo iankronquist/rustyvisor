@@ -348,6 +348,10 @@ pub const fn is_page_aligned(n: u64) -> bool {
     (n & 0xfff) == 0
 }
 
+pub const fn is_canonical(n: u64) -> bool {
+    (n >= 0xffff8000_00000000) || (n <= 0x00007fff_ffffffff)
+}
+
 
 pub fn cpuid(mut eax: u32) -> (u32, u32, u32, u32) {
     let ebx: u32;
@@ -1142,6 +1146,9 @@ fn vmcs_initialize_segment_fields(
         debug!("Limit: {:#x}", limit);
         vmwrite(limit_field, limit)?;
     }
+    debug!("Base: {:#x}", base);
+    unsafe {debug!("Granularity {:#x} index {}", (*gdt.offset(index)).granularity, index);}
+    assert!(is_canonical(base));
     vmwrite(base_field, base)?;
     debug!("Segment: {:#x}", segment);
     vmwrite(segment_field, segment as u64)
