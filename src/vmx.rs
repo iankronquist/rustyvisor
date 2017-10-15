@@ -31,6 +31,72 @@ pub enum MSR {
     Ia32SMBase = 0x0000009e,
 }
 
+// These constants are ugly, but Rust doesn't let you use enums like integers yet.
+// 仕方がない。
+
+// Pin-based controls
+pub const EXTERNAL_INTERRUPT_EXITING: u32 = 1 << 0;
+pub const NMI_EXITING: u32 = 1 << 3;
+pub const VIRTUAL_NMI: u32 = 1 << 5;
+pub const VMX_PREEMPTION: u32 = 1 << 6;
+pub const POSTED_INTERRUPTS: u32 = 1 << 7;
+
+// CPU-based controls
+pub const INTERRUPT_WINDOW_EXITING: u32 = 1 << 2;
+pub const TSC_OFFSETTING: u32 = 1 << 3;
+pub const HLT_EXITING: u32 = 1 << 7;
+pub const INVLPG_EXITING: u32 = 1 << 9;
+pub const MWAIT_EXITING: u32 = 1 << 10;
+pub const RDPMC_EXITING: u32 = 1 << 11;
+pub const RDTSC_EXITING: u32 = 1 << 12;
+pub const CR3_LD_EXITING: u32 = 1 << 15;
+pub const CR3_ST_EXITING: u32 = 1 << 16;
+pub const CR8_LD_EXITING: u32 = 1 << 19;
+pub const CR8_ST_EXITING: u32 = 1 << 20;
+pub const TPR_SHADOW: u32 = 1 << 21;
+pub const NMI_WINDOW_EXITING: u32 = 1 << 22;
+pub const MOV_DR_EXITING: u32 = 1 << 23;
+pub const IO_EXITING: u32 = 1 << 24;
+pub const IO_BITMAPS: u32 = 1 << 25;
+pub const MONITOR_TRAP_FLAG_ENABLE: u32 = 1 << 27;
+pub const MSR_BITMAPS: u32 = 1 << 28;
+pub const MONITOR_EXITING: u32 = 1 << 29;
+pub const PAUSE_EXITING: u32 = 1 << 30;
+pub const SECONDARY_ENABLE: u32 = 1 << 31;
+
+// Secondary CPU-based controls
+pub const VIRTUAL_APIC: u32 = 1 << 0;
+pub const EPT_ENABLE: u32 = 1 << 1;
+pub const DT_EXITING: u32 = 1 << 2;
+pub const RDTSCP_ENABLE: u32 = 1 << 3;
+pub const X2APIC_ENABLE: u32 = 1 << 4;
+pub const VPID_ENABLE: u32 = 1 << 5;
+pub const WBINVD_EXITING: u32 = 1 << 6;
+pub const UNRESTRICTED_GUEST: u32 = 1 << 7;
+pub const VIRTUAL_APIC_REGISTER: u32 = 1 << 8;
+pub const VIRTUAL_INTERRUPT_ENABLE: u32 = 1 << 9;
+pub const PAUSE_LOOP_EXITING: u32 = 1 << 10;
+pub const RDRAND_EXITING: u32 = 1 << 11;
+pub const INVPCID_ENABLE: u32 = 1 << 12;
+pub const VMFUNC_ENABLE: u32 = 1 << 13;
+pub const VMCS_SHADOW: u32 = 1 << 14;
+pub const ENCLS_EXITING: u32 = 1 << 15;
+pub const RDSEED_EXITING: u32 = 1 << 16;
+pub const PML_ENABLE: u32 = 1 << 17;
+pub const EPT_VE_ENABLE: u32 = 1 << 18;
+pub const PT_CONCEAL_VMX: u32 = 1 << 19;
+pub const XSAVES_ENABLE: u32 = 1 << 20;
+pub const EPT_EXECUTE_CONTROL: u32 = 1 << 22;
+pub const TSC_SCALING_ENABLE: u32 = 1 << 25;
+
+// TODO: add the rest of these flags, which we don't need yet
+// VM Exit controls
+pub const X64_MODE: u32 = 1 << 9;
+pub const INTERRUPT_ACKNOWLEDGE: u32 = 1 << 15;
+
+// VM Entry controls
+// bit 9 is also toggles IA-32e mode, so we can use the same constant
+
 fn vm_instruction_error_number_message(n: u64) -> &'static str {
     match n {
         1 => "VMALL executed in VMX root operation",
@@ -1038,8 +1104,26 @@ fn vmcs_initialize_guest_state(rsp: u64, rip: u64) -> Result<(), u32> {
     Ok(())
 }
 
-fn vmcs_initialize_vm_control_values() {
-    // Simon, this is your place to ☆shine☆!
+fn vmcs_initialize_vm_control_values() -> Result<(), u32> {
+    let (pin_msr_0_settings, pin_msr_1_settings) = rdmsr(MSR::Ia32VmxPinBasedCtls);
+    let (proc_msr_0_settings, proc_msr_1_settings) = rdmsr(MSR::Ia32VmxProcBasedCtls);
+    let (secondary_proc_msr_0_settings, secondary_proc_msr_1_settings) = rdmsr(MSR::Ia32VmxProcBasedCtls2);
+    let (entry_msr_0_settings, entry_msr_1_settings) = rdmsr(MSR::Ia32VmxEntryCtls);
+    let (exit_msr_0_settings, exit_msr_1_settings) = rdmsr(MSR::Ia32VmxExitCtls);
+
+    let pin_settings: u32 = pin_msr_0_settings | (pin_msr_1_settings & 0);
+    let proc_settings: u32 = proc_msr_0_settings | (proc_msr_1_settings & SECONDARY_ENABLE);
+    let secondary_proc_settings: u32 = secondary_proc_msr_0_settings | (secondary_proc_msr_1_settings & 0);
+    let entry_settings: u32 = entry_msr_0_settings | (entry_msr_1_settings & X64_MODE);
+    let exit_settings: u32 = exit_msr_0_settings | (exit_msr_1_settings & (X64_MODE | INTERRUPT_ACKNOWLEDGE));
+
+    vmwrite(VMCSField::PinBasedVMExecControl, pin_settings as u64)?;
+    vmwrite(VMCSField::CPUBasedVMExecControl, proc_settings as u64)?;
+    vmwrite(VMCSField::SecondaryVMExecControl, secondary_proc_settings as u64)?;
+    vmwrite(VMCSField::VMExitControls, exit_settings as u64)?;
+    vmwrite(VMCSField::VMEntryControls, entry_settings as u64)?;
+
+    Ok(())
 }
 
 
@@ -1109,7 +1193,9 @@ pub fn load_vm(vmcs: *mut u8, vmcs_phys: u64, vmcs_size: usize) -> Result<(), ()
     if vmcs_initialize_guest_state(rsp, rip) != Ok(()) {
         return Err(());
     }
-    vmcs_initialize_vm_control_values();
+    if vmcs_initialize_vm_control_values() != Ok(()) {
+        return Err(());
+    }
 
     if vmlaunch() != Ok(()) {
         match vmread(VMCSField::VMInstructionError) {
