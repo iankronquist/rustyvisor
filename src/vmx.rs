@@ -1092,7 +1092,7 @@ fn vmcs_initialize_segment_fields(
     segment_field: VMCSField,
 ) -> Result<(), u32> {
     let system_access_bit: u8 = 1 << 4;
-    let access: u64;
+    let mut access: u64;
     let limit: u64;
     let mut base: u64;
     // See figure 3-6.
@@ -1100,6 +1100,21 @@ fn vmcs_initialize_segment_fields(
     // bit used to denote whether it's an LDT segment or a GDT segment. The
     // rest are the index into the GDT.
     let index = (segment >> 3) as isize;
+    let present_bit = 1 << 7;
+    let usable_bit = 1 << 16;
+
+    // Unusable segment.
+    if segment == 0 {
+        if let Some(access_field) = maybe_access_field {
+            vmwrite(access_field, usable_bit)?;
+        }
+        if let Some(limit_field) = maybe_limit_field {
+            vmwrite(limit_field, 0)?;
+        }
+        vmwrite(base_field, 0)?;
+        vmwrite(segment_field, segment as u64)?;
+        return Ok(());
+    }
 
     // For backwards compatibility with processors from the prehistoric
     // era, the GDT entry layout is a mess. This is exacerbated by the fact
@@ -1136,6 +1151,12 @@ fn vmcs_initialize_segment_fields(
             debug!("64 bit segment");
             base |= ((*entry64).base_highest as u64) << 32;
         }
+    }
+
+    if access & present_bit == 0 {
+        access |= usable_bit;
+    } else {
+        access &= !usable_bit;
     }
 
 
