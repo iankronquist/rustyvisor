@@ -1240,12 +1240,15 @@ fn vmcs_initialize_guest_state(rsp: u64, rip: u64) -> Result<(), u32> {
     )?;
 
 
+    assert!(is_canonical(idtr.base));
     vmwrite(VMCSField::GuestIDTRLimit, idtr.limit as u64)?;
     vmwrite(VMCSField::GuestIDTRBase, idtr.base)?;
 
+    assert!(is_canonical(gdtr.base));
     vmwrite(VMCSField::GuestGDTRLimit, gdtr.limit as u64)?;
     vmwrite(VMCSField::GuestGDTRBase, gdtr.base)?;
 
+    assert!(is_canonical(ldtr.base));
     vmwrite(VMCSField::GuestLDTRLimit, ldtr.limit as u64)?;
     vmwrite(VMCSField::GuestLDTRBase, ldtr.base)?;
 
