@@ -1091,8 +1091,7 @@ fn vmcs_initialize_segment_fields(
     base_field: VMCSField,
     segment_field: VMCSField,
 ) -> Result<(), u32> {
-    // Labeled "L" in figure 3-8.
-    let long_mode_bit: u8 = 1 << 5;
+    let system_access_bit: u8 = 1 << 4;
     let access: u64;
     let limit: u64;
     let mut base: u64;
@@ -1132,12 +1131,14 @@ fn vmcs_initialize_segment_fields(
             ((*gdt.offset(index)).base_low as u64);
 
         // If this is a long mode segment, read the "base_highest" field.
-        if ((*gdt.offset(index)).access & system_access_bit) != 0 {
+        if ((*gdt.offset(index)).granularity & system_access_bit) != 0 {
             let entry64 = gdt.offset(index) as *const segmentation::GDTEntry64;
             debug!("64 bit segment");
             base |= ((*entry64).base_highest as u64) << 32;
         }
     }
+
+
     if let Some(access_field) = maybe_access_field {
         debug!("Access: {:#x}", access);
         vmwrite(access_field, access)?;
