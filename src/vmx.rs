@@ -352,6 +352,10 @@ pub const fn is_canonical(n: u64) -> bool {
     (n >= 0xffff8000_00000000) || (n <= 0x00007fff_ffffffff)
 }
 
+pub const fn is_high_bits_zero(n : u64) -> bool {
+    (n & 0xffffffff_00000000) == 0
+}
+
 
 pub fn cpuid(mut eax: u32) -> (u32, u32, u32, u32) {
     let ebx: u32;
@@ -923,6 +927,169 @@ fn get_vmcs_revision_identifier() -> u32 {
     vmcs_revision_identifier
 }
 
+fn check_vmcs_guest_fields() {
+    // Assume iA32-e mode && !unrestricted guest.
+    let vm_secondary_exit_controls = vmread(VMCSField::SecondaryVMExecControl).expect("Guest secondary VM exec controls");
+    assert!(vm_secondary_exit_controls & (UNRESTRICTED_GUEST as u64) == 0);
+    let vm_entry_controls = vmread(VMCSField::VMEntryControls).expect("Guest VM Entry controls");
+    assert!(vm_entry_controls & (X64_MODE as u64) != 0);
+
+    // 26.3.1.1
+    // TODO: Read MSRs to double check CR0 and CR4.
+    let guest_cr0 = vmread(VMCSField::GuestCR0).expect("Check guest cr0");
+    // CR0.PG
+    assert!(guest_cr0 & (1 << 31) != 0);
+    // CR0.PE
+    assert!(guest_cr0 & 1 != 0);
+
+    let guest_cr4 = vmread(VMCSField::GuestCR4).expect("Check guest cr4");
+    // CR4.PAE
+    assert!(guest_cr4 & (1 << 5) != 0);
+
+    // TODO: debug ctl registers
+
+    let guest_cr3 = vmread(VMCSField::GuestCR3).expect("Check guest cr3");
+    assert!(guest_cr3 & 0xfff0000000000000 == 0);
+
+    let guest_sysenter_esp = vmread(VMCSField::GuestSysenterESP).expect("Check guest esp");
+    assert!(is_canonical(guest_sysenter_esp));
+
+    let guest_sysenter_eip = vmread(VMCSField::GuestSysenterEIP).expect("Check guest eip");
+    assert!(is_canonical(guest_sysenter_eip));
+
+
+    // TODO: PERF global ctl, EFER, PAT, BNDCFGs.
+
+
+    // 26.3.1.2
+    let guest_tr_sel = vmread(VMCSField::GuestTrSelector).expect("Check guest tr");
+    assert!(guest_tr_sel & (1 << 2) == 0);
+    let guest_ldtr_acc = vmread(VMCSField::GuestLDTRArBytes).expect("Check guest ldtr ar");
+    // Usable bit
+    if guest_ldtr_acc & (1 << 16) != 0 {
+        let guest_ldtr_sel = vmread(VMCSField::GuestLDTRSelector).expect("Check guest ldtr sel");
+        assert!(guest_ldtr_sel & (1 << 2) == 0);
+        let guest_ldtr_base = vmread(VMCSField::GuestLDTRBase).expect("Check guest ldtr base");
+        assert!(is_canonical(guest_ldtr_base));
+    }
+
+
+    let tr_base = vmread(VMCSField::GuestTRBase).expect("Check guest tr base");
+    assert!(is_canonical(tr_base));
+
+    let fs_base = vmread(VMCSField::GuestFSBase).expect("Check guest fs base");
+    assert!(is_canonical(fs_base));
+
+    let gs_base = vmread(VMCSField::GuestGSBase).expect("Check guest gs base");
+    assert!(is_canonical(gs_base));
+
+    let cs_base = vmread(VMCSField::GuestCSBase).expect("Check guest cs base");
+    assert!(is_high_bits_zero(cs_base));
+
+    let ss_acc = vmread(VMCSField::GuestSSArBytes).expect("Check guest ss access");
+    // Usable bit
+    if ss_acc & (1 << 16) == 0 {
+        let ss_base = vmread(VMCSField::GuestSSBase).expect("Check guest ss base");
+        assert!(is_high_bits_zero(ss_base));
+        let ss_type = ss_acc & 0xf;
+        // R/W + Accessed
+        assert!(ss_type == 3 || ss_type == 7);
+        // Present
+        assert!(ss_acc & (1 << 7) != 0);
+        // Reserved
+        assert!(ss_acc & (0xf00) == 0);
+        // Reserved
+        assert!(ss_acc & (0xffff0000) == 0);
+    }
+
+    let ds_acc = vmread(VMCSField::GuestDSArBytes).expect("Check guest ds acceds");
+    // Usable bit
+    if ds_acc & (1 << 16) == 0 {
+        let ds_base = vmread(VMCSField::GuestSSBase).expect("Check guest ds base");
+        assert!(is_high_bits_zero(ds_base));
+        // Code segment
+        if ds_acc & (1 << 3) != 0 {
+            assert!(ds_acc & (1 << 1) != 0);
+        }
+        info!("ds_acc {:#x}", ds_acc);
+        // Accessed
+        assert!(ds_acc & 1 != 0);
+        // Present
+        assert!(ds_acc & (1 << 7) != 0);
+        // Reserved
+        assert!(ds_acc & (0xf00) == 0);
+        // Reserved
+        assert!(ds_acc & (0xffff0000) == 0);
+    }
+
+    let es_acc = vmread(VMCSField::GuestESArBytes).expect("Check guest es access");
+    // Usable bit
+    if es_acc & (1 << 16) == 0 {
+        let es_base = vmread(VMCSField::GuestSSBase).expect("Check guest es base");
+        assert!(is_high_bits_zero(es_base));
+        // Code segment
+        if es_acc & (1 << 3) != 0 {
+            assert!(es_acc & (1 << 1) != 0);
+        }
+        // Accessed
+        assert!(es_acc & 1 != 0);
+        // Present
+        assert!(es_acc & (1 << 7) != 0);
+        // Reserved
+        assert!(es_acc & (0xf00) == 0);
+        // Reserved
+        assert!(es_acc & (0xffff0000) == 0);
+    }
+
+    let fs_acc = vmread(VMCSField::GuestFSArBytes).expect("Check guest fs access");
+    // Usable bit
+    if fs_acc & (1 << 16) == 0 {
+        // Code segment
+        if fs_acc & (1 << 3) != 0 {
+            assert!(fs_acc & (1 << 1) != 0);
+        }
+        // Accessed
+        assert!(fs_acc & 1 != 0);
+        // Present
+        assert!(fs_acc & (1 << 7) != 0);
+        // Reserved
+        assert!(fs_acc & (0xf00) == 0);
+        // Reserved
+        assert!(fs_acc & (0xffff0000) == 0);
+    }
+    let gs_acc = vmread(VMCSField::GuestGSArBytes).expect("Check guest gs access");
+    // Usable bit
+    if gs_acc & (1 << 16) == 0 {
+        // Code segment
+        if gs_acc & (1 << 3) != 0 {
+            assert!(gs_acc & (1 << 1) != 0);
+        }
+        // Accessed
+        assert!(gs_acc & 1 != 0);
+        // Present
+        assert!(gs_acc & (1 << 7) != 0);
+        // Reserved
+        assert!(gs_acc & (0xf00) == 0);
+        // Reserved
+        assert!(gs_acc & (0xffff0000) == 0);
+    }
+    let cs_acc = vmread(VMCSField::GuestCSArBytes).expect("Check guest cs access");
+    // Usable bit
+    if cs_acc & (1 << 16) == 0 {
+        // System
+        assert!(cs_acc & (1 << 4) != 0);
+    }
+    // Always Present
+    assert!(cs_acc & (1 << 7) != 0);
+    // Always reserved
+    assert!(cs_acc & (0xf00) == 0);
+    // Always reserved
+    assert!(cs_acc & (0xffff0000) == 0);
+    // TODO: Granularity.
+    // TODO: TR.
+    // TODO: LDTR.
+
+}
 
 fn set_cr0_bits() {
     let fixed0 = rdmsrl(MSR::Ia32VmxCr0Fixed0);
@@ -1427,6 +1594,8 @@ pub fn load_vm(
     if vmcs_initialize_vm_control_values() != Ok(()) {
         return Err(());
     }
+
+    check_vmcs_guest_fields();
 
     if vmlaunch() != Ok(()) {
         match vmread(VMCSField::VMInstructionError) {
