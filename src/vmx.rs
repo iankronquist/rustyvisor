@@ -633,6 +633,19 @@ pub fn read_gs() -> u16 {
     ret
 }
 
+pub fn sldt() -> u16 {
+    let ret: u16;
+    unsafe {
+        asm!(
+            "sldt $0"
+            : "=r"(ret)
+            :
+            :
+            );
+    }
+    ret as u16
+}
+
 pub fn read_tr() -> u16 {
     let ret: u16;
     unsafe {
@@ -996,8 +1009,6 @@ fn vmcs_initialize_guest_state(rsp: u64, rip: u64) -> Result<(), u32> {
     interrupts::sidt(&mut idtr);
     let mut gdtr: segmentation::GDTDescriptor = Default::default();
     segmentation::sgdt(&mut gdtr);
-    let mut ldtr: segmentation::GDTDescriptor = Default::default();
-    segmentation::sldt(&mut ldtr);
     let gdt: *const segmentation::GDTEntry = gdtr.base as *const segmentation::GDTEntry;
 
 
@@ -1068,17 +1079,20 @@ fn vmcs_initialize_guest_state(rsp: u64, rip: u64) -> Result<(), u32> {
         VMCSField::GuestTRBase,
         VMCSField::GuestTrSelector,
     )?;
-
+    vmcs_initialize_guest_segment_fields(
+        gdt,
+        sldt(),
+        VMCSField::GuestLDTRArBytes,
+        VMCSField::GuestLDTRLimit,
+        VMCSField::GuestLDTRBase,
+        VMCSField::GuestLDTRSelector,
+    )?;
 
     vmwrite(VMCSField::GuestIDTRLimit, idtr.limit as u64)?;
     vmwrite(VMCSField::GuestIDTRBase, idtr.base)?;
 
     vmwrite(VMCSField::GuestGDTRLimit, gdtr.limit as u64)?;
     vmwrite(VMCSField::GuestGDTRBase, gdtr.base)?;
-
-    vmwrite(VMCSField::GuestLDTRLimit, ldtr.limit as u64)?;
-    vmwrite(VMCSField::GuestLDTRBase, ldtr.base)?;
-
 
     vmwrite(VMCSField::GuestIA32Debugctl, rdmsrl(MSR::Ia32DebugCtlMSR))?;
 

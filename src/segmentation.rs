@@ -35,17 +35,6 @@ pub fn sgdt(gdt_desc: *mut GDTDescriptor) {
     }
 }
 
-pub fn sldt(ldt_desc: *mut GDTDescriptor) {
-    unsafe {
-        asm!(
-            "sldt ($0)"
-            :
-            : "r"(ldt_desc)
-            :
-            );
-    }
-}
-
 const LIMIT_LOW: u16 = !0;
 
 const LIMIT_HIGH_NIBBLE: u8 = 0x00ff;
