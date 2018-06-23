@@ -962,13 +962,6 @@ fn vmcs_initialize_guest_segment_fields(
     // that Rust doesn't have struct bitfields.
     // Unpack all of the parts of the GDT entry so we can write them to the VMCS.
     unsafe {
-        debug!(
-            "GDT Entry {:x} {} \n\t{:?}",
-            segment,
-            index,
-            *gdt.offset(index)
-        );
-
         // The access rights are split up into two bytes.
         // The byte we call `granularity` also has nibble of the limit stuffed
         // in, which we need to mask out.

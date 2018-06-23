@@ -1,6 +1,5 @@
 use core::mem;
 
-#[derive(Debug)]
 #[repr(packed)]
 #[allow(dead_code)]
 pub struct GDTEntry {
