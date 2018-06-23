@@ -3,23 +3,25 @@
 #![feature(const_fn)]
 #![feature(use_extern_macros)]
 #![feature(lang_items)]
+#![feature(panic_implementation)]
+#![feature(panic_info_message)]
 
 #![allow(unknown_lints)]
 
-#[macro_use]
-extern crate log;
 extern crate spin;
+
+#[cfg(not(test))]
+#[macro_use]
+pub mod serial_logger;
+#[cfg(not(test))]
+use serial_logger as logger;
+
+
 
 pub mod vmx;
 pub mod runtime;
 mod segmentation;
 mod interrupts;
-
-#[cfg(not(test))]
-mod serial_logger;
-#[cfg(not(test))]
-use serial_logger as logger;
-
 
 include!(concat!(env!("OUT_DIR"), "/version.rs"));
 

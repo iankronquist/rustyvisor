@@ -1,20 +1,29 @@
-use log;
-//#[macro_use]
+#![allow(dead_code)]
 use core::fmt;
 use core::fmt::Write;
 use spin::Mutex;
 
+#[derive(PartialOrd, PartialEq, Eq)]
+#[derive(Debug)]
+pub enum Level {
+    Debug,
+    Info,
+    Warn,
+    Error,
+}
 
 const PORT: u16 = 0x3f8;
 
 #[derive(Default)]
 pub struct SerialPort;
 
-#[derive(Default)]
-pub struct SerialLogger;
+pub struct SerialLogger {
+    port: SerialPort,
+    level: Level
+}
 
 
-static SERIAL_PORT_MUTEX: Mutex<SerialPort> = Mutex::new(SerialPort);
+pub static SERIAL_PORT: Mutex<SerialLogger> = Mutex::new(SerialLogger { port: SerialPort{}, level: Level::Debug });
 
 fn outw(port: u16, data: u16) {
     unsafe {
@@ -48,12 +57,12 @@ impl fmt::Write for SerialPort {
 
 impl fmt::Write for SerialLogger {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
-        SERIAL_PORT_MUTEX.lock().write_str(s)
+        SERIAL_PORT.lock().port.write_str(s)
     }
 }
 
 impl SerialLogger {
-    fn init(&self) {
+    pub fn init(&self) -> Result<(), ()> {
         outw(PORT + 1, 0x00);
         outw(PORT + 3, 0x80);
         outw(PORT, 0x01);
@@ -62,18 +71,103 @@ impl SerialLogger {
         outw(PORT + 2, 0xc7);
         outw(PORT + 4, 0x0b);
         outw(PORT + 1, 0x01);
+        Ok(())
+    }
+
+    pub fn is_enabled(&self, level: Level) -> bool {
+        level >= self.level
+    }
+
+    pub fn log(&mut self, level: Level, fmt: fmt::Arguments) {
+        let _ = write!(self, "{:?}: {}\n", level, fmt);
     }
 }
 
+#[macro_export]
+macro_rules! log {
+    ($lvl:expr, $fmt:tt, $($arg:tt)*) => {
+        {
+            use logger;
+            let mut ul = logger::SERIAL_PORT.lock();
+            if ul.is_enabled($lvl) {
+                ul.log($lvl, format_args!($fmt, $($arg)*));
+            }
+        }
+    };
+    ($lvl:expr, $fmt:tt) => {
+        {
+            use logger;
+            let mut ul = logger::SERIAL_PORT.lock();
+            if ul.is_enabled($lvl) {
+                ul.log($lvl, format_args!($fmt));
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! error {
+    ($fmt:tt, $($arg:tt)*) => {
+        log!(logger::Level::Error, $fmt, $($arg)*);
+    };
+    ($fmt:tt) => {
+        log!(logger::Level::Error, $fmt);
+    };
+}
+
+#[macro_export]
+macro_rules! info {
+    ($fmt:tt, $($arg:tt)*) => {
+        log!(logger::Level::Info, $fmt, $($arg)*);
+    };
+    ($fmt:tt) => (
+        log!(logger::Level::Info, $fmt);
+    );
+}
+
+#[macro_export]
+macro_rules! warn {
+    ($fmt:tt, $($arg:tt)*) => (
+        log!(logger::Level::Warn, $fmt, $($arg)*);
+    );
+    ($fmt:tt) => (
+        log!(logger::Level::Warn, $fmt);
+    )
+}
+
+#[macro_export]
+macro_rules! debug {
+    ($fmt:tt, $($arg:tt)*) => (
+        log!(logger::Level::Debug, $fmt, $($arg)*);
+    );
+    ($fmt:tt) => (
+        log!(logger::Level::Debug, $fmt);
+    )
+}
+
+pub fn init() -> Result<(), ()> {
+    let sp = SERIAL_PORT.lock();
+    (*sp).init()
+}
+
+pub fn fini() { }
+
+
+// Used in panic handler.
+pub unsafe fn bust_locks() {
+    SERIAL_PORT.force_unlock();
+}
+
+/*
 impl log::Log for SerialLogger {
-    fn enabled(&self, metadata: &log::LogMetadata) -> bool {
-        metadata.level() <= log::LogLevel::Info
+    fn enabled(&self, metadata: &log::Metadata) -> bool {
+        metadata.level() <= log::Level::Info
     }
 
     fn log(&self, record: &log::LogRecord) {
         if self.enabled(record.metadata()) {
             let _ = write!(
-                SERIAL_PORT_MUTEX.lock(),
+                SERIAL_PORT.lock(),
                 "{}: {}\r\n",
                 record.level(),
                 record.args()
@@ -87,7 +181,7 @@ pub fn init() -> Result<(), log::SetLoggerError> {
         log::set_logger_raw(|max_log_level| {
             static LOGGER: SerialLogger = SerialLogger;
             LOGGER.init();
-            max_log_level.set(log::LogLevelFilter::Debug);
+            max_log_level.set(log::LevelFilter::Debug);
             &LOGGER
         })
     }
@@ -96,3 +190,4 @@ pub fn init() -> Result<(), log::SetLoggerError> {
 pub fn fini() -> Result<(), log::ShutdownLoggerError> {
     log::shutdown_logger_raw().map(|_logger| {})
 }
+*/
