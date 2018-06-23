@@ -50,6 +50,7 @@ $ curl https://sh.rustup.rs -sSf | sh
 $ source ~/.cargo/env
 $ rustup install nightly
 $ rustup default nightly
+$ rustup target install x86_64-unknown-linux-gnu
 ```
 
 To build Rust code for kernel context we use the cross compilation tool Xargo:

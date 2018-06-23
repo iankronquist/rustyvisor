@@ -1,4 +1,4 @@
-TARGET := x86_64-linux
+TARGET := x86_64-unknown-linux-gnu
 RELEASE := debug
 MODULENAME := rustyvisor
 obj-m += $(MODULENAME).o
@@ -10,7 +10,7 @@ XARGO := xargo
 KCOV := kcov
 RUSTFILES := src/*.rs
 RUSTFLAGS='-C relocation-model=static --deny warnings'
-CARFOFEATURES="runtime_tests"
+CARGOFEATURES="runtime_tests"
 ccflags-y := -Wall -Werror
 
 all: $(MODULENAME).ko
@@ -19,7 +19,7 @@ $(MODULENAME).ko: loader/linux.c target/$(TARGET)/$(RELEASE)/lib$(MODULENAME).a
 	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules
 
 target/$(TARGET)/$(RELEASE)/lib$(MODULENAME).a: $(RUSTFILES) Cargo.toml
-	RUSTFLAGS=$(RUSTFLAGS) $(XARGO) build --target=$(TARGET) --verbose --features "$(CARFOFEATURES)"
+	RUST_TARGET_PATH=$(shell pwd) RUSTFLAGS=$(RUSTFLAGS) $(CARGO) build --target=$(TARGET) --verbose --features "$(CARGOFEATURES)"
 
 test:
 	$(CARGO) test --verbose
@@ -33,6 +33,6 @@ clean:
 	rm -f *.o *.ko *.ko.unsigned modules.order Module.symvers *.mod.c .*.cmd $($(MODULENAME)-objs)
 	rm -rf .tmp_versions
 	rm -f $($(MODULENAME)-objs)
-	$(XARGO) clean
+	$(CARGO) clean
 
 .PHONY: all clean coverage test
