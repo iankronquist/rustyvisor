@@ -1,7 +1,8 @@
 #![cfg(not(test))]
 
-use core::fmt;
+use logger;
 
+use core::panic::PanicInfo;
 
 #[lang = "eh_personality"]
 #[no_mangle]
@@ -47,12 +48,15 @@ pub extern "C" fn _Unwind_Resume() {
 }
 
 
-#[allow(empty_loop)]
-#[lang = "panic_fmt"]
+/// This function is called on panic.
+#[panic_implementation]
 #[no_mangle]
-pub extern "C" fn panic_fmt(fmt: fmt::Arguments, file: &'static str, line: u32) -> ! {
+pub fn panic(info: &PanicInfo) -> ! {
+    unsafe {
+        logger::bust_locks();
+    }
 
-    error!("PANIC: {} {} {}\n", fmt, file, line);
+    error!("PANIC: {:#?} {:#?}\n", info.message(), info.location());
 
     loop {
         unsafe {
