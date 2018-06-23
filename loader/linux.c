@@ -84,6 +84,24 @@ int rustyvisor_loader_core_unload(void *_) {
 	return 0;
 }
 
+static void rustyvisor_cleanup(void) {
+	int cpu;
+	struct task_struct *task;
+	sema_init(&init_lock, 1);
+
+	for_each_online_cpu(cpu) {
+		task = kthread_create(rustyvisor_loader_core_unload, NULL, "rustyvisor_core_unload");
+		kthread_bind(task, cpu);
+
+		down(&init_lock);
+
+		wake_up_process(task);
+	}
+
+	down(&init_lock);
+
+	rustyvisor_unload();
+}
 
 static int __init rustyvisor_init(void) {
 	int cpu;
@@ -109,33 +127,16 @@ static int __init rustyvisor_init(void) {
 	err = atomic_read(&failure_count);
 	if (err != 0) {
 		printk(KERN_DEBUG "%d cores failed to load\n", err);
-		rustyvisor_exit();
+		rustyvisor_cleanup();
 		return -1;
 	}
 
 	return 0;
 }
 
-
 static void __exit rustyvisor_exit(void) {
-	int cpu;
-	struct task_struct *task;
-	sema_init(&init_lock, 1);
-
-	for_each_online_cpu(cpu) {
-		task = kthread_create(rustyvisor_loader_core_unload, NULL, "rustyvisor_core_unload");
-		kthread_bind(task, cpu);
-
-		down(&init_lock);
-
-		wake_up_process(task);
-	}
-
-	down(&init_lock);
-
-	rustyvisor_unload();
+	rustyvisor_cleanup();
 }
-
 
 module_init(rustyvisor_init);
 module_exit(rustyvisor_exit);
