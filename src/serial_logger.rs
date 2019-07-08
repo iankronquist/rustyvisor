@@ -1,9 +1,7 @@
 use log;
-//#[macro_use]
-use core::fmt;
-use core::fmt::Write;
-use spin::Mutex;
 
+use core::fmt::{self, Write};
+use spin::Mutex;
 
 const PORT: u16 = 0x3f8;
 
@@ -12,7 +10,6 @@ pub struct SerialPort;
 
 #[derive(Default)]
 pub struct SerialLogger;
-
 
 static SERIAL_PORT_MUTEX: Mutex<SerialPort> = Mutex::new(SerialPort);
 
@@ -72,9 +69,9 @@ impl log::Log for SerialLogger {
 
     fn log(&self, record: &log::LogRecord) {
         if self.enabled(record.metadata()) {
-            let _ = write!(
+            let _ = writeln!(
                 SERIAL_PORT_MUTEX.lock(),
-                "{}: {}\n",
+                "{}: {}",
                 record.level(),
                 record.args()
             );

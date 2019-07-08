@@ -1,5 +1,7 @@
 #![cfg(not(test))]
 
+use ::log::{error, log};
+
 use core::panic::PanicInfo;
 
 #[lang = "eh_personality"]
@@ -45,15 +47,16 @@ pub extern "C" fn _Unwind_Resume() {
     error!("PANIC: _Unwind_Resume\n");
 }
 
-#[allow(empty_loop)]
 #[no_mangle]
 #[panic_handler]
 pub extern "C" fn panic_fmt(info: &PanicInfo) -> ! {
     if let Some(location) = info.location() {
-        error!("PANIC: {} {} {}",
-               info.payload().downcast_ref::<&str>().unwrap(),
-               location.file(),
-               location.line())
+        error!(
+            "PANIC: {} {} {}",
+            info.payload().downcast_ref::<&str>().unwrap(),
+            location.file(),
+            location.line()
+        )
     }
 
     loop {

@@ -5,5 +5,5 @@ set -e
 
 make
 make test
-cargo clippy -- -D clippy || true
-cargo fmt -- --write-mode diff
+cargo clippy -- -W clippy::all
+cargo fmt -- --check
