@@ -19,7 +19,7 @@ $(MODULENAME).ko: loader/linux.c target/$(TARGET)/$(RELEASE)/lib$(MODULENAME).a
 	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules
 
 target/$(TARGET)/$(RELEASE)/lib$(MODULENAME).a: $(RUSTFILES) Cargo.toml
-	RUSTFLAGS=$(RUSTFLAGS) $(XARGO) build --target=$(TARGET) --verbose --features "$(CARFOFEATURES)"
+	RUST_TARGET_PATH=$(shell pwd) RUSTFLAGS=$(RUSTFLAGS) $(XARGO) build --target=$(TARGET) --verbose --features "$(CARFOFEATURES)"
 
 test:
 	$(CARGO) test --verbose

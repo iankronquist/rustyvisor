@@ -16,6 +16,10 @@ rustup default nightly
 
 rustup component add rust-src
 
+rustup component add clippy
+
+rustup component add rustfmt
+
 sudo apt-get install linux-headers-$(uname -r)
 
 cargo install xargo || true
