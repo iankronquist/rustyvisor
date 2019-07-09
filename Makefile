@@ -4,18 +4,19 @@ MODULENAME := rustyvisor
 obj-m += $(MODULENAME).o
 $(MODULENAME)-objs += loader/linux.o target/$(TARGET)/$(RELEASE)/lib$(MODULENAME).a
 KDIR := /lib/modules/$(shell uname -r)/build
-LDFLAGS += -T $(SUBDIRS)/loader/linux_linker.lds
+LDFLAGS += -T $(src)/loader/linux_linker.lds
 CARGO := cargo
 KCOV := kcov
 RUSTFILES := src/*.rs
 RUSTFLAGS := '-C relocation-model=static --deny warnings'
 CARFOFEATURES := runtime_tests
 ccflags-y := -Wall -Werror
+ldflags-y += -T $(src)/loader/linux_linker.lds
 
 all: $(MODULENAME).ko
 
 $(MODULENAME).ko: loader/linux.c target/$(TARGET)/$(RELEASE)/lib$(MODULENAME).a
-	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules
+	$(MAKE) -C $(KDIR) M=$(PWD) modules
 
 target/$(TARGET)/$(RELEASE)/lib$(MODULENAME).a: $(RUSTFILES) Cargo.toml
 	RUSTFLAGS=$(RUSTFLAGS) $(CARGO) xbuild --target=$(TARGET).json --verbose --features "$(CARFOFEATURES)"

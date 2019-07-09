@@ -1,6 +1,8 @@
 {
   "llvm-target": "x86_64-unknown-linux-gnu",
   "linker-flavor": "ld",
+  "relocation-model": "static",
+  "needs-plt": true,
   "data-layout": "e-m:e-i64:64-f80:128-n8:16:32:64-S128",
   "target-endian": "little",
   "target-pointer-width": "64",
