@@ -2,6 +2,7 @@
 name = "rustyvisor"
 version = "0.1.0"
 authors = ["Ian Kronquist <iankronquist@gmail.com>"]
+edition = "2018"
 build = "build.rs"
 
 

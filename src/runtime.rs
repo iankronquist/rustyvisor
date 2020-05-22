@@ -1,7 +1,8 @@
 #![cfg(not(test))]
 
-use core::fmt;
+use ::log::{error, log};
 
+use core::panic::PanicInfo;
 
 #[lang = "eh_personality"]
 #[no_mangle]
@@ -46,13 +47,17 @@ pub extern "C" fn _Unwind_Resume() {
     error!("PANIC: _Unwind_Resume\n");
 }
 
-
-#[allow(empty_loop)]
-#[lang = "panic_fmt"]
 #[no_mangle]
-pub extern "C" fn panic_fmt(fmt: fmt::Arguments, file: &'static str, line: u32) -> ! {
-
-    error!("PANIC: {} {} {}\n", fmt, file, line);
+#[panic_handler]
+pub extern "C" fn panic_fmt(info: &PanicInfo) -> ! {
+    if let Some(location) = info.location() {
+        error!(
+            "PANIC: {} {} {}",
+            info.payload().downcast_ref::<&str>().unwrap(),
+            location.file(),
+            location.line()
+        )
+    }
 
     loop {
         unsafe {

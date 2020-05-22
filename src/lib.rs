@@ -1,26 +1,20 @@
 #![no_std]
 #![feature(asm)]
 #![feature(const_fn)]
-#![feature(use_extern_macros)]
 #![feature(lang_items)]
-
 #![allow(unknown_lints)]
 
-#[macro_use]
-extern crate log;
-extern crate spin;
+use ::log::{error, info, log};
 
-pub mod vmx;
 pub mod runtime;
+pub mod vmx;
 
 #[cfg(not(test))]
 mod serial_logger;
 #[cfg(not(test))]
 use serial_logger as logger;
 
-
 include!(concat!(env!("OUT_DIR"), "/version.rs"));
-
 
 #[repr(C)]
 pub struct PerCoreData {
@@ -45,34 +39,34 @@ pub extern "C" fn rustyvisor_load() -> i32 {
 
     info!("{}", VERSION);
 
-    #[cfg(feature = "runtime_tests")] runtime_tests();
+    #[cfg(feature = "runtime_tests")]
+    runtime_tests();
 
     0
 }
 
 #[no_mangle]
-pub extern "C" fn rustyvisor_core_load(data: *const PerCoreData) -> i32 {
+pub unsafe extern "C" fn rustyvisor_core_load(data: *const PerCoreData) -> i32 {
     if data.is_null() {
         return 1;
     }
 
-    unsafe {
-        if vmx::enable(
-            (*data).vmxon_region,
-            (*data).vmxon_region_phys,
-            (*data).vmxon_region_size,
-        ) != Ok(())
-        {
-            error!("Failed to enable VMX");
-            return 1;
-        }
+    let data = &*data;
+
+    if vmx::enable(
+        data.vmxon_region,
+        data.vmxon_region_phys,
+        data.vmxon_region_size,
+    )
+    .is_err()
+    {
+        error!("Failed to enable VMX");
+        return 1;
     }
 
-    unsafe {
-        if vmx::load_vm((*data).vmcs, (*data).vmcs_phys, (*data).vmcs_size) != Ok(()) {
-            error!("Failed to load VMX");
-            return 1;
-        }
+    if vmx::load_vm(data.vmcs, data.vmcs_phys, data.vmcs_size).is_err() {
+        error!("Failed to load VMX");
+        return 1;
     }
 
     info!("Successfully launched VM");
@@ -81,15 +75,13 @@ pub extern "C" fn rustyvisor_core_load(data: *const PerCoreData) -> i32 {
 
 #[no_mangle]
 pub extern "C" fn rustyvisor_core_unload() {
-    info!("core unload");
+    info!("Core unload");
     vmx::unload_vm();
     vmx::disable();
 }
 
-
 #[no_mangle]
 pub extern "C" fn rustyvisor_unload() {
-
     info!("Hypervisor unloaded.");
 
     #[cfg(not(test))]

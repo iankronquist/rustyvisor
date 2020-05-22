@@ -16,8 +16,6 @@ use core::fmt::{Write};
 use core::ptr;
 use core::mem;
 
-extern crate spin;
-
 use self::spin::Mutex;
 
 pub mod serial_logger_lite;

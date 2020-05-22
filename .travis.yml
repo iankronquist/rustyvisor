@@ -3,7 +3,7 @@ os: linux
 sudo: required
 cache: cargo
 rust:
-  - nightly-2017-09-30
+  - nightly
 
 install:
   - bash ./scripts/ci-install.sh

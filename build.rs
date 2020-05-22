@@ -1,8 +1,4 @@
-use std::env;
-use std::fs::File;
-use std::io::Write;
-use std::path::Path;
-use std::process::Command;
+use std::{env, fs::File, io::Write, path::Path, process::Command};
 
 fn tags() -> String {
     let output = Command::new("git")
@@ -21,9 +17,9 @@ fn branch() -> String {
 }
 
 fn date() -> String {
-    let output = Command::new("date").output().expect(
-        "Failed to execute date",
-    );
+    let output = Command::new("date")
+        .output()
+        .expect("Failed to execute date");
     String::from_utf8_lossy(&output.stdout).trim().to_string()
 }
 
@@ -44,13 +40,12 @@ fn local_changes() -> bool {
 }
 
 fn kernel_version() -> String {
-    let output = Command::new("uname").arg("-r").output().expect(
-        "Failed to execute uname",
-    );
+    let output = Command::new("uname")
+        .arg("-r")
+        .output()
+        .expect("Failed to execute uname");
     String::from_utf8_lossy(&output.stdout).trim().to_string()
 }
-
-
 
 fn main() {
     let version = env!("CARGO_PKG_VERSION");
@@ -77,7 +72,7 @@ fn main() {
         kernel_version()
     );
 
-    let version_code = format!("const VERSION: &'static str = \"{}\";", version_info);
+    let version_code = format!("const VERSION: &'_ str = \"{}\";", version_info);
 
     let out_dir = env::var("OUT_DIR").unwrap();
     let dest_path = Path::new(&out_dir).join("version.rs");
