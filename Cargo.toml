@@ -1,19 +1,7 @@
-[package]
-name = "rustyvisor"
-version = "0.1.0"
-authors = ["Ian Kronquist <iankronquist@gmail.com>"]
-edition = "2018"
-build = "build.rs"
+[workspace]
 
-
-[dependencies]
-spin = { version = "0.4" }
-log = { default-features = false, version = "0.3" }
-
-
-[features]
-runtime_tests = []
-dmesg_logger = []
-
-[lib]
-crate_type = ["staticlib"]
+members = [
+    "hypervisor",
+    "uefi",
+    "pcuart",
+]

@@ -4,6 +4,7 @@ use ::log::{error, log};
 
 use core::panic::PanicInfo;
 
+/*
 #[lang = "eh_personality"]
 #[no_mangle]
 pub extern "C" fn eh_personality() {
@@ -46,6 +47,7 @@ pub extern "C" fn __floatundidf() {
 pub extern "C" fn _Unwind_Resume() {
     error!("PANIC: _Unwind_Resume\n");
 }
+*/
 
 #[no_mangle]
 #[panic_handler]

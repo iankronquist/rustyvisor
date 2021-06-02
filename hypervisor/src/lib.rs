@@ -1,43 +1,61 @@
 #![no_std]
 #![feature(asm)]
-#![feature(const_fn)]
 #![feature(lang_items)]
 #![allow(unknown_lints)]
 
 use ::log::{error, info, log};
 
-pub mod runtime;
+//pub mod runtime;
 pub mod vmx;
+mod vmcs;
+mod vmcs_fields;
+mod msr;
+mod segmentation;
+mod interrupts;
+mod isr;
+mod vmexit_handlers;
+mod register_state;
 
+/*
 #[cfg(not(test))]
 mod serial_logger;
 #[cfg(not(test))]
 use serial_logger as logger;
-
-include!(concat!(env!("OUT_DIR"), "/version.rs"));
+*/
+use pcuart::logger;
+//include!(concat!(env!("OUT_DIR"), "/version.rs"));
 
 #[repr(C)]
 pub struct PerCoreData {
-    vmxon_region: *mut u8,
-    vmcs: *mut u8,
+    vmxon_region: *mut u32,
+    vmcs: *mut u32,
     vmxon_region_phys: u64,
     vmcs_phys: u64,
     vmxon_region_size: usize,
     vmcs_size: usize,
     loaded_successfully: bool,
+    stack_base: *mut u32,
+    stack_size: usize,
+    stack_top: *mut u32,
+    host_gdt_base: *mut u64,
+    host_gdt_limit: u64,
+    tr_base: u64,
+    tr_selector: u16,
 }
 
 #[no_mangle]
 pub extern "C" fn rustyvisor_load() -> i32 {
-    #[cfg(not(test))]
-    {
-        match logger::init() {
-            Ok(()) => {}
-            Err(_) => return 1,
-        }
+
+    // The log crate requires the stdlib to use log::set_logger. Use the unsafe version instead.
+    let logger_result = unsafe { ::log::set_logger_raw(|_filter|{&logger::LOGGER}) };
+    match logger_result{
+        Ok(()) => {}
+        Err(_) => return -1,
     }
 
-    info!("{}", VERSION);
+    info!("{}", "Hello world");
+
+    interrupts::init_interrupt_handlers(vmx::read_cs());
 
     #[cfg(feature = "runtime_tests")]
     runtime_tests();
@@ -45,11 +63,9 @@ pub extern "C" fn rustyvisor_load() -> i32 {
     0
 }
 
+
 #[no_mangle]
-pub unsafe extern "C" fn rustyvisor_core_load(data: *const PerCoreData) -> i32 {
-    if data.is_null() {
-        return 1;
-    }
+pub unsafe extern "C" fn rustyvisor_core_load(data: &PerCoreData) -> i32 {
 
     let data = &*data;
 
@@ -61,14 +77,12 @@ pub unsafe extern "C" fn rustyvisor_core_load(data: *const PerCoreData) -> i32 {
     .is_err()
     {
         error!("Failed to enable VMX");
-        return 1;
+        return -1;
     }
-
-    if vmx::load_vm(data.vmcs, data.vmcs_phys, data.vmcs_size).is_err() {
+    if vmx::load_vm(data).is_err() {
         error!("Failed to load VMX");
         return 1;
     }
-
     info!("Successfully launched VM");
     0
 }
