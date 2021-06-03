@@ -1,7 +1,6 @@
 #![allow(non_upper_case_globals)]
 #![allow(unused)]
 
-
 #[repr(u64)]
 pub enum VmcsField {
     VirtualProcessorID = 0x0000_0000,
@@ -181,7 +180,6 @@ pub enum VmcsField {
     HostRsp = 0x0000_6c14,
     HostRip = 0x0000_6c16,
 }
-
 
 pub const PinBasedControlsExternalInterruptExiting: u64 = 1 << 0;
 pub const PinBasedControlsNmiExiting: u64 = 1 << 3;

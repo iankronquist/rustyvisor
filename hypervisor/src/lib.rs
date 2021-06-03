@@ -6,15 +6,15 @@
 use ::log::{error, info, log};
 
 //pub mod runtime;
-pub mod vmx;
-mod vmcs;
-mod vmcs_fields;
-mod msr;
-pub mod segmentation;
 mod interrupts;
 mod isr;
-mod vmexit_handlers;
+mod msr;
 mod register_state;
+pub mod segmentation;
+mod vmcs;
+mod vmcs_fields;
+mod vmexit_handlers;
+pub mod vmx;
 
 /*
 #[cfg(not(test))]
@@ -45,10 +45,9 @@ pub struct VCpu {
 
 #[no_mangle]
 pub extern "C" fn rustyvisor_load() -> i32 {
-
     // The log crate requires the stdlib to use log::set_logger. Use the unsafe version instead.
-    let logger_result = unsafe { ::log::set_logger_raw(|_filter|{&logger::LOGGER}) };
-    match logger_result{
+    let logger_result = unsafe { ::log::set_logger_raw(|_filter| &logger::LOGGER) };
+    match logger_result {
         Ok(()) => {}
         Err(_) => return -1,
     }
@@ -63,10 +62,8 @@ pub extern "C" fn rustyvisor_load() -> i32 {
     0
 }
 
-
 #[no_mangle]
 pub unsafe extern "C" fn rustyvisor_core_load(data: &VCpu) -> i32 {
-
     let data = &*data;
 
     if vmx::enable(

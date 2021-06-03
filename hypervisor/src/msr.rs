@@ -1,4 +1,3 @@
-
 #[allow(dead_code)]
 #[repr(u32)]
 pub enum Msr {
@@ -38,7 +37,6 @@ pub fn rdmsr(msr: Msr) -> (u32, u32) {
     (edx, eax)
 }
 
-
 pub fn rdmsrl(msr: Msr) -> u64 {
     let (eax, edx) = rdmsr(msr);
     (u64::from(edx) << 32) | u64::from(eax)
@@ -47,10 +45,10 @@ pub fn rdmsrl(msr: Msr) -> u64 {
 pub fn wrmsr(msr: Msr, eax: u32, edx: u32) {
     unsafe {
         asm!(
-            "wrmsr",
-             in("eax")(eax),
-              in("edx")(edx),
-              in("ecx")(msr as u32)
-            );
+        "wrmsr",
+         in("eax")(eax),
+          in("edx")(edx),
+          in("ecx")(msr as u32)
+        );
     }
 }

@@ -1,15 +1,18 @@
-use core::convert::TryFrom;
-use crate::vmx::{vmwrite, read_cr0,read_cr3, read_cr4,read_cs,read_db7, read_ds, read_es,read_fs,read_gs,read_ss};
-use crate::msr::{Msr, rdmsr};
-use crate::vmcs_fields::*;
+use crate::msr::{rdmsr, Msr};
 use crate::segmentation;
+use crate::vmcs_fields::*;
+use crate::vmx::{
+    read_cr0, read_cr3, read_cr4, read_cs, read_db7, read_ds, read_es, read_fs, read_gs, read_ss,
+    vmwrite,
+};
 use crate::VCpu;
+use core::convert::TryFrom;
 
 extern "C" {
     fn _host_entrypoint();
 }
 
-pub fn initialize_host_state(vcpu: &VCpu) -> Result<(), u32>{
+pub fn initialize_host_state(vcpu: &VCpu) -> Result<(), u32> {
     vmwrite(VmcsField::HostCr0, read_cr0())?;
     vmwrite(VmcsField::HostCr3, read_cr3())?;
     vmwrite(VmcsField::HostCr4, read_cr4())?;
@@ -34,7 +37,6 @@ pub fn initialize_host_state(vcpu: &VCpu) -> Result<(), u32>{
     vmwrite(VmcsField::HostFsBase, vcpu as *const VCpu as u64)?;
     vmwrite(VmcsField::HostGsBase, 0)?;
 
-
     vmwrite(VmcsField::HostRsp, vcpu.stack_top as u64)?;
     vmwrite(VmcsField::HostRip, _host_entrypoint as u64)?;
 
@@ -43,7 +45,7 @@ pub fn initialize_host_state(vcpu: &VCpu) -> Result<(), u32>{
 
 pub fn initialize_guest_state() {}
 
-pub fn adjust_value_based_on_msr(msr: Msr, controls: u64) -> u64{
+pub fn adjust_value_based_on_msr(msr: Msr, controls: u64) -> u64 {
     let controls = u32::try_from(controls).expect("Controls should be a 32 bit field"); // 503 953 2390
     let (fixed0, fixed1) = rdmsr(msr);
     assert_eq!(controls & fixed0, controls);
@@ -51,31 +53,52 @@ pub fn adjust_value_based_on_msr(msr: Msr, controls: u64) -> u64{
 }
 
 pub fn initialize_vm_control_values() -> Result<(), u32> {
-    
     // Configure entry/exit and supported feature controls
-    vmwrite(VmcsField::SecondaryVmExecControl,
-        adjust_value_based_on_msr(Msr::Ia32VmxProcBasedControls2,
-            SecondaryCpuBasedControlsRdtscpEnable | SecondaryCpuBasedControlsInvpcidEnable | SecondaryCpuBasedControlsXSavesEnable))?;
+    vmwrite(
+        VmcsField::SecondaryVmExecControl,
+        adjust_value_based_on_msr(
+            Msr::Ia32VmxProcBasedControls2,
+            SecondaryCpuBasedControlsRdtscpEnable
+                | SecondaryCpuBasedControlsInvpcidEnable
+                | SecondaryCpuBasedControlsXSavesEnable,
+        ),
+    )?;
 
-    vmwrite(VmcsField::PinBasedVmExecControl,
-        adjust_value_based_on_msr(Msr::Ia32VmxPinBasedControls, PinBasedControlsVmxPreemption | PinBasedControlsExternalInterruptExiting))?;
+    vmwrite(
+        VmcsField::PinBasedVmExecControl,
+        adjust_value_based_on_msr(
+            Msr::Ia32VmxPinBasedControls,
+            PinBasedControlsVmxPreemption | PinBasedControlsExternalInterruptExiting,
+        ),
+    )?;
 
     vmwrite(VmcsField::VmxPreemptionTimerValue, 0xfffff)?;
 
-    vmwrite(VmcsField::CpuBasedVmExecControl,
-        adjust_value_based_on_msr(Msr::Ia32VmxProcBasedControls,
-            CpuBasedControlsMsrBitmaps | CpuBasedControlsSecondaryEnable | CpuBasedControlsIoBitmaps | CpuBasedControlsIoExiting))?;
+    vmwrite(
+        VmcsField::CpuBasedVmExecControl,
+        adjust_value_based_on_msr(
+            Msr::Ia32VmxProcBasedControls,
+            CpuBasedControlsMsrBitmaps
+                | CpuBasedControlsSecondaryEnable
+                | CpuBasedControlsIoBitmaps
+                | CpuBasedControlsIoExiting,
+        ),
+    )?;
 
-    vmwrite(VmcsField::VmExitControls,
-        adjust_value_based_on_msr(Msr::Ia32VmxExitControls,
-            VmExitIa32eMode | VmExitAcknowledgeInterruptOnExit | VmExitConcealVmxFromPt))?;
+    vmwrite(
+        VmcsField::VmExitControls,
+        adjust_value_based_on_msr(
+            Msr::Ia32VmxExitControls,
+            VmExitIa32eMode | VmExitAcknowledgeInterruptOnExit | VmExitConcealVmxFromPt,
+        ),
+    )?;
 
-    vmwrite(VmcsField::VmEntryControls,
-        adjust_value_based_on_msr(Msr::Ia32VmxEntryControls,
-            VmEntryIa32eMode))?;
+    vmwrite(
+        VmcsField::VmEntryControls,
+        adjust_value_based_on_msr(Msr::Ia32VmxEntryControls, VmEntryIa32eMode),
+    )?;
     Ok(())
 }
-
 
 pub fn vm_instruction_error_number_message(n: u64) -> &'static str {
     match n {

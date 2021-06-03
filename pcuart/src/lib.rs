@@ -38,7 +38,9 @@ pub enum UartBaudRate {
 
 impl Uart {
     pub const fn new(com: UartComPort) -> Self {
-        Self { io_port_base: com as u16 }
+        Self {
+            io_port_base: com as u16,
+        }
     }
     pub fn init(&self, enable_receiver_interrupts: bool, baud_rate: UartBaudRate) {
         outw(self.io_port_base + UART_OFFSET_INTERRUPT_ENABLE, 0x00);
@@ -47,7 +49,10 @@ impl Uart {
         let dlab_low: u16 = baud_rate as u16 & 0xff;
         let dlab_high: u16 = (baud_rate as u16 >> 8) & 0xff;
         outw(self.io_port_base + UART_OFFSET_DIVISOR_LATCH_LOW, dlab_low);
-        outw(self.io_port_base + UART_OFFSET_DIVISOR_LATCH_HIGH, dlab_high);
+        outw(
+            self.io_port_base + UART_OFFSET_DIVISOR_LATCH_HIGH,
+            dlab_high,
+        );
         outw(self.io_port_base + UART_OFFSET_LINE_CONTROL, 0x03);
         outw(self.io_port_base + UART_OFFSET_FIFO_CONTROL, 0xc7);
         outw(self.io_port_base + UART_OFFSET_MODEM_CONTROL, 0x0b);
@@ -56,7 +61,6 @@ impl Uart {
             unimplemented!();
         } else {
             outw(self.io_port_base + UART_OFFSET_INTERRUPT_ENABLE, 0x00);
-
         }
     }
 }
@@ -85,7 +89,10 @@ impl fmt::Write for Uart {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
         for c in s.chars() {
             while (inb(self.io_port_base + UART_OFFSET_LINE_STATUS) & 0x20) == 0 {}
-            outb(self.io_port_base + UART_OFFSET_TRANSMITTER_HOLDING_BUFFER, c as u8);
+            outb(
+                self.io_port_base + UART_OFFSET_TRANSMITTER_HOLDING_BUFFER,
+                c as u8,
+            );
         }
         Ok(())
     }

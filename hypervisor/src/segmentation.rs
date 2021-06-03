@@ -1,7 +1,7 @@
-const GDT_ENTRY_ACCESS_PRESENT: u8 =  1 << 7;
+const GDT_ENTRY_ACCESS_PRESENT: u8 = 1 << 7;
 
 // Table 24-2 ch 24-4 vol 3c
-const  VMX_INFO_SEGMENT_UNUSABLE: u32 = 1 << 16;
+const VMX_INFO_SEGMENT_UNUSABLE: u32 = 1 << 16;
 
 #[derive(Default)]
 pub struct UnpackedGdtEntry {
@@ -11,9 +11,7 @@ pub struct UnpackedGdtEntry {
     selector: u16,
 }
 
-
 pub fn unpack_gdt_entry(gdt: &[GdtEntry], selector: u16) -> UnpackedGdtEntry {
-
     let mut unpacked: UnpackedGdtEntry = Default::default();
 
     let index: usize = usize::from(selector) / core::mem::size_of::<GdtEntry>();
@@ -25,7 +23,9 @@ pub fn unpack_gdt_entry(gdt: &[GdtEntry], selector: u16) -> UnpackedGdtEntry {
     unpacked.selector = selector;
     unpacked.limit = lsl(selector & !0x3);
     unpacked.base = u64::from(gdt[index].base_low);
-    unpacked.base = (u64::from(gdt[index].base_high) << 24) | (u64::from(gdt[index].base_middle) << 16) | u64::from(gdt[index].base_low);
+    unpacked.base = (u64::from(gdt[index].base_high) << 24)
+        | (u64::from(gdt[index].base_middle) << 16)
+        | u64::from(gdt[index].base_low);
 
     unpacked.access_rights = u32::from(gdt[index].access);
     unpacked.access_rights |= (u32::from((gdt[index].granularity) & 0xf0) << 8);
@@ -53,17 +53,18 @@ pub struct GdtEntry {
 pub fn lsl(selector: u16) -> u64 {
     let limit: u64;
     let selector = u32::from(selector);
-    unsafe { asm!("lsl {selector:e}, {limit}", limit = out(reg) limit, selector = in(reg) selector ); }
+    unsafe {
+        asm!("lsl {selector:e}, {limit}", limit = out(reg) limit, selector = in(reg) selector );
+    }
     limit
 }
-
 
 pub fn sgdt(gdt_desc: *mut GdtDescriptor) {
     unsafe {
         asm!(
-            "sgdt [{}]",
-            in(reg) (gdt_desc)
-            );
+        "sgdt [{}]",
+        in(reg) (gdt_desc)
+        );
     }
 }
 
@@ -71,10 +72,9 @@ pub fn get_current_gdt() -> &'static [GdtEntry] {
     let mut gdtr: GdtDescriptor = Default::default();
     sgdt(&mut gdtr);
     unsafe {
-        core::slice::from_raw_parts(gdtr.base as *const GdtEntry, usize::from(gdtr.limit) + 1 )
+        core::slice::from_raw_parts(gdtr.base as *const GdtEntry, usize::from(gdtr.limit) + 1)
     }
 }
-
 
 #[derive(Default)]
 #[repr(packed)]
@@ -90,8 +90,8 @@ pub struct Tss {
     stack1: u64,
     stack2: u64,
     reserved1: u64,
-    ist:[u64;7],
+    ist: [u64; 7],
     reserved2: u64,
     reserved3: u16,
-    iomap_base: u16
+    iomap_base: u16,
 }

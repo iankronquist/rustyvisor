@@ -2,12 +2,9 @@ use ::log::{error, info, log};
 
 use core::{mem, ptr};
 
-use crate::msr::{rdmsrl, rdmsr, wrmsr, Msr};
-use crate::{VCpu, vmcs};
+use crate::msr::{rdmsr, rdmsrl, wrmsr, Msr};
 use crate::vmcs_fields::VmcsField;
-
-
-
+use crate::{vmcs, VCpu};
 
 const IA32_FEATURE_CONTROL_LOCK_BIT: u32 = 1 << 0;
 const IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT: u32 = 1 << 2;
@@ -48,9 +45,7 @@ pub fn vmxon(addr: u64) -> Result<(), u32> {
 
 pub fn vmxoff() {
     unsafe {
-        asm!(
-        "vmxoff"
-        );
+        asm!("vmxoff");
     }
 }
 
@@ -94,7 +89,6 @@ pub fn vmwrite(field: VmcsField, val: u64) -> Result<(), u32> {
         Err(ret)
     }
 }
-
 
 pub fn vmptrld(vmcs_phys: u64) -> Result<(), u32> {
     let ret: u32;
@@ -158,11 +152,11 @@ pub fn vmlaunch() -> Result<(), u32> {
     let ret: u32;
     unsafe {
         asm!(
-        "xor eax, eax; \
+            "xor eax, eax; \
         vmlaunch; \
          setc ah; \
          setz al;",
-        lateout("eax")(ret),
+            lateout("eax")(ret),
         );
     }
     if ret == 0 {
@@ -181,7 +175,7 @@ pub fn vmresume() -> Result<(), u32> {
              setc ah; \
              setz al;",
             lateout("eax")(ret),
-            );
+        );
     }
     if ret == 0 {
         Ok(())
@@ -193,10 +187,7 @@ pub fn vmresume() -> Result<(), u32> {
 pub fn read_cs() -> u16 {
     let ret: u16;
     unsafe {
-        asm!(
-        "mov ax, cs",
-        lateout("eax") (ret)
-        );
+        asm!("mov ax, cs", lateout("eax")(ret));
     }
     ret
 }
@@ -204,10 +195,7 @@ pub fn read_cs() -> u16 {
 pub fn read_ds() -> u16 {
     let ret: u16;
     unsafe {
-        asm!(
-        "mov ax, ds",
-        lateout("eax") (ret)
-        );
+        asm!("mov ax, ds", lateout("eax")(ret));
     }
     ret
 }
@@ -215,10 +203,7 @@ pub fn read_ds() -> u16 {
 pub fn read_es() -> u16 {
     let ret: u16;
     unsafe {
-        asm!(
-        "mov ax, es",
-        lateout("eax") (ret)
-        );
+        asm!("mov ax, es", lateout("eax")(ret));
     }
     ret
 }
@@ -226,10 +211,7 @@ pub fn read_es() -> u16 {
 pub fn read_fs() -> u16 {
     let ret: u16;
     unsafe {
-        asm!(
-        "mov ax, fs",
-        lateout("eax") (ret)
-        );
+        asm!("mov ax, fs", lateout("eax")(ret));
     }
     ret
 }
@@ -237,10 +219,7 @@ pub fn read_fs() -> u16 {
 pub fn read_gs() -> u16 {
     let ret: u16;
     unsafe {
-        asm!(
-        "mov ax, gs",
-        lateout("eax") (ret)
-        );
+        asm!("mov ax, gs", lateout("eax")(ret));
     }
     ret
 }
@@ -248,10 +227,7 @@ pub fn read_gs() -> u16 {
 pub fn read_ss() -> u16 {
     let ret: u16;
     unsafe {
-        asm!(
-        "mov ax, ss",
-        lateout("eax") (ret)
-        );
+        asm!("mov ax, ss", lateout("eax")(ret));
     }
     ret
 }
@@ -259,10 +235,7 @@ pub fn read_ss() -> u16 {
 pub fn read_cr3() -> u64 {
     let ret: u64;
     unsafe {
-        asm!(
-        "mov {}, cr3",
-        lateout(reg) (ret)
-        );
+        asm!("mov {}, cr3", lateout(reg)(ret));
     }
     ret
 }
@@ -270,10 +243,7 @@ pub fn read_cr3() -> u64 {
 pub fn read_cr4() -> u64 {
     let ret: u64;
     unsafe {
-        asm!(
-        "mov {}, cr4",
-        lateout(reg) (ret)
-        );
+        asm!("mov {}, cr4", lateout(reg)(ret));
     }
     ret
 }
@@ -281,14 +251,10 @@ pub fn read_cr4() -> u64 {
 pub fn read_cr0() -> u64 {
     let ret: u64;
     unsafe {
-        asm!(
-        "mov {}, cr0",
-        lateout(reg) (ret)
-        );
+        asm!("mov {}, cr0", lateout(reg)(ret));
     }
     ret
 }
-
 
 pub fn write_cr0(val: u64) {
     unsafe {
@@ -308,14 +274,10 @@ pub fn write_cr4(val: u64) {
     }
 }
 
-
 pub fn read_db7() -> u64 {
     let ret: u64;
     unsafe {
-        asm!(
-            "mov db7, {}",
-            lateout(reg) (ret)
-        );
+        asm!("mov db7, {}", lateout(reg)(ret));
     }
     ret
 }
@@ -323,10 +285,7 @@ pub fn read_db7() -> u64 {
 pub fn read_flags() -> u64 {
     let ret: u64;
     unsafe {
-        asm!(
-        "pushf; pop {}",
-        lateout(reg) (ret)
-        );
+        asm!("pushf; pop {}", lateout(reg)(ret));
     }
     ret
 }
@@ -341,7 +300,6 @@ fn get_vmcs_revision_identifier() -> u32 {
     assert!((vmcs_revision_identifier & (1 << 31)) == 0);
     vmcs_revision_identifier
 }
-
 
 fn set_cr0_bits() {
     let fixed0 = rdmsrl(Msr::Ia32VmxCr0Fixed0);
@@ -425,7 +383,6 @@ pub fn enable(
         Err(())
     }
 }
-
 
 pub fn disable() {
     vmxoff();

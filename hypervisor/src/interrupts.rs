@@ -1,9 +1,8 @@
-use spin::Mutex;
-use core::mem;
 use crate::isr;
+use core::mem;
+use spin::Mutex;
 
 use crate::register_state::InterruptCpuState;
-
 
 #[derive(Copy, Clone, Default)]
 #[repr(packed)]
@@ -17,27 +16,30 @@ struct IdtEntry {
     _reserved: u32,
 }
 
-
 #[derive(Default)]
 pub struct Idt([IdtEntry; 20]);
-
-
-
-
 
 pub fn sidt(idt_desc: *mut IdtDescriptor) {
     unsafe {
         asm!(
-            "sidt [{}]]",
-            in(reg) idt_desc
-            
-            );
+        "sidt [{}]]",
+        in(reg) idt_desc
+
+        );
     }
 }
 
 impl IdtEntry {
     const fn new() -> Self {
-        IdtEntry { base_high: 0, base_highest: 0, base_low: 0, always0: 0, flags: 0, selector: 0, _reserved: 0 }
+        IdtEntry {
+            base_high: 0,
+            base_highest: 0,
+            base_low: 0,
+            always0: 0,
+            flags: 0,
+            selector: 0,
+            _reserved: 0,
+        }
     }
 }
 
@@ -71,14 +73,17 @@ pub extern "C" fn interrupt_dispatcher(state: &mut InterruptCpuState) {
     panic!("Unhandled interrupt {:x?}", state);
 }
 
-
 pub fn init_interrupt_handlers(cs: u16) {
     let mut idt = IDT.lock();
     for i in 0..20 {
-        idt.set_entry(i, isr::ISR[i as usize] as u64,cs, IDT_ENTRY_FLAGS_RING_0 | IDT_ENTRY_FLAGS_PRESENT | IDT_ENTRY_FLAGS_INTERRUPT_GATE);
+        idt.set_entry(
+            i,
+            isr::ISR[i as usize] as u64,
+            cs,
+            IDT_ENTRY_FLAGS_RING_0 | IDT_ENTRY_FLAGS_PRESENT | IDT_ENTRY_FLAGS_INTERRUPT_GATE,
+        );
     }
 }
-
 
 #[derive(Default)]
 #[repr(packed)]
@@ -87,12 +92,10 @@ pub struct IdtDescriptor {
     pub base: u64,
 }
 
-
 impl<'a> IdtDescriptor {
     pub fn from_cpu() -> IdtDescriptor {
         let mut current_idt_ptr: IdtDescriptor = Default::default();
         sidt(&mut current_idt_ptr);
         current_idt_ptr
     }
-
 }
