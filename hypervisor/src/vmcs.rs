@@ -3,13 +3,13 @@ use crate::vmx::{vmwrite, read_cr0,read_cr3, read_cr4,read_cs,read_db7, read_ds,
 use crate::msr::{Msr, rdmsr};
 use crate::vmcs_fields::*;
 use crate::segmentation;
-use crate::PerCoreData;
+use crate::VCpu;
 
 extern "C" {
     fn _host_entrypoint();
 }
 
-pub fn initialize_host_state(vcpu: &PerCoreData) -> Result<(), u32>{
+pub fn initialize_host_state(vcpu: &VCpu) -> Result<(), u32>{
     vmwrite(VmcsField::HostCr0, read_cr0())?;
     vmwrite(VmcsField::HostCr3, read_cr3())?;
     vmwrite(VmcsField::HostCr4, read_cr4())?;
@@ -31,7 +31,7 @@ pub fn initialize_host_state(vcpu: &PerCoreData) -> Result<(), u32>{
 
     vmwrite(VmcsField::HostGdtrBase, vcpu.host_gdt_base as u64)?;
     vmwrite(VmcsField::HostIdtrBase, crate::interrupts::host_idt_base())?;
-    vmwrite(VmcsField::HostFsBase, vcpu as *const PerCoreData as u64)?;
+    vmwrite(VmcsField::HostFsBase, vcpu as *const VCpu as u64)?;
     vmwrite(VmcsField::HostGsBase, 0)?;
 
 

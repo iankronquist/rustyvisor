@@ -10,7 +10,7 @@ pub mod vmx;
 mod vmcs;
 mod vmcs_fields;
 mod msr;
-mod segmentation;
+pub mod segmentation;
 mod interrupts;
 mod isr;
 mod vmexit_handlers;
@@ -26,21 +26,21 @@ use pcuart::logger;
 //include!(concat!(env!("OUT_DIR"), "/version.rs"));
 
 #[repr(C)]
-pub struct PerCoreData {
-    vmxon_region: *mut u32,
-    vmcs: *mut u32,
-    vmxon_region_phys: u64,
-    vmcs_phys: u64,
-    vmxon_region_size: usize,
-    vmcs_size: usize,
-    loaded_successfully: bool,
-    stack_base: *mut u32,
-    stack_size: usize,
-    stack_top: *mut u32,
-    host_gdt_base: *mut u64,
-    host_gdt_limit: u64,
-    tr_base: u64,
-    tr_selector: u16,
+pub struct VCpu {
+    pub vmxon_region: *mut u32,
+    pub vmcs: *mut u32,
+    pub vmxon_region_phys: u64,
+    pub vmcs_phys: u64,
+    pub vmxon_region_size: usize,
+    pub vmcs_size: usize,
+    pub loaded_successfully: bool,
+    pub stack_base: *mut u32,
+    pub stack_size: usize,
+    pub stack_top: *mut u32,
+    pub host_gdt_base: *mut u64,
+    pub host_gdt_limit: u64,
+    pub tr_base: u64,
+    pub tr_selector: u16,
 }
 
 #[no_mangle]
@@ -65,7 +65,7 @@ pub extern "C" fn rustyvisor_load() -> i32 {
 
 
 #[no_mangle]
-pub unsafe extern "C" fn rustyvisor_core_load(data: &PerCoreData) -> i32 {
+pub unsafe extern "C" fn rustyvisor_core_load(data: &VCpu) -> i32 {
 
     let data = &*data;
 

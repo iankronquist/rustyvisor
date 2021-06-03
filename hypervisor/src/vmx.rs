@@ -3,7 +3,7 @@ use ::log::{error, info, log};
 use core::{mem, ptr};
 
 use crate::msr::{rdmsrl, rdmsr, wrmsr, Msr};
-use crate::{PerCoreData, vmcs};
+use crate::{VCpu, vmcs};
 use crate::vmcs_fields::VmcsField;
 
 
@@ -432,7 +432,7 @@ pub fn disable() {
     info!("vmxoff");
 }
 
-pub fn load_vm(vcpu: &PerCoreData) -> Result<(), u32> {
+pub fn load_vm(vcpu: &VCpu) -> Result<(), u32> {
     assert!(is_page_aligned(vcpu.vmcs as u64));
     assert!(is_page_aligned(vcpu.vmcs_phys));
 

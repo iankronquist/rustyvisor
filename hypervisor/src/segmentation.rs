@@ -25,10 +25,10 @@ pub fn unpack_gdt_entry(gdt: &[GdtEntry], selector: u16) -> UnpackedGdtEntry {
     unpacked.selector = selector;
     unpacked.limit = lsl(selector & !0x3);
     unpacked.base = u64::from(gdt[index].base_low);
-    unpacked.base = u64::from(gdt[index].base_high << 24) | u64::from(gdt[index].base_middle << 16) | u64::from(gdt[index].base_low);
+    unpacked.base = (u64::from(gdt[index].base_high) << 24) | (u64::from(gdt[index].base_middle) << 16) | u64::from(gdt[index].base_low);
 
     unpacked.access_rights = u32::from(gdt[index].access);
-    unpacked.access_rights |= u32::from((gdt[index].granularity & 0xf0) << 8);
+    unpacked.access_rights |= (u32::from((gdt[index].granularity) & 0xf0) << 8);
     unpacked.access_rights &= 0xf0ff;
     if (gdt[index].access & GDT_ENTRY_ACCESS_PRESENT) == 0 {
         unpacked.access_rights |= VMX_INFO_SEGMENT_UNUSABLE;
@@ -61,7 +61,7 @@ pub fn lsl(selector: u16) -> u64 {
 pub fn sgdt(gdt_desc: *mut GdtDescriptor) {
     unsafe {
         asm!(
-            "sgdt [{}]]",
+            "sgdt [{}]",
             in(reg) (gdt_desc)
             );
     }
@@ -83,3 +83,15 @@ pub struct GdtDescriptor {
     pub base: u64,
 }
 
+#[repr(packed)]
+pub struct Tss {
+    reserved0: u32,
+    stack0: u64,
+    stack1: u64,
+    stack2: u64,
+    reserved1: u64,
+    ist:[u64;7],
+    reserved2: u64,
+    reserved3: u16,
+    iomap_base: u16
+}
