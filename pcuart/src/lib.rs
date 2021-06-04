@@ -66,23 +66,15 @@ impl Uart {
 }
 
 fn outw(port: u16, data: u16) {
-    unsafe {
-        asm!("out dx, al", in("dx") (port as u16), in("ax") (data));
-    }
+    unsafe { x86::io::outw(port, data) }
 }
 
 fn outb(port: u16, data: u8) {
-    unsafe {
-        asm!("out dx, al", in("dx") (port as u16), in("al") (data));
-    }
+    unsafe { x86::io::outb(port, data) }
 }
 
 fn inb(port: u16) -> u8 {
-    let data: u8;
-    unsafe {
-        asm!("in al, dx", out("al")(data), in("dx")(port as u16));
-    }
-    data
+    unsafe { x86::io::inb(port) }
 }
 
 impl fmt::Write for Uart {
