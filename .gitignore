@@ -1,10 +1,48 @@
-target
+# Editor swap files
+.*.swp
+.*.sw*
+
+# Common compiler artifacts
+*.d
+
+# Binary blobs
+*.bin
+*.img
+
+# Unix compiler artifacts
+*.a
+*.o
+*.elf
+
+# Windows family compiler artifacts
+*.pdb
+*.efi
+*.uefi
+*.obj
+*.lib
+
+# Log files
+*.log
+
+# Compile commands database
+*.ccdb.json
+compile_commands.json
+
+# Python bytecode
+*.pyc
+
+# Cargo files
+target/
 Cargo.lock
+
+# Vagrant metadata
+.vagrant/
+
+# Linux build system artifacts
 .*.cmd
 .tmp_versions/
 Module.symvers
 modules.order
 *.ko
 *.mod.c
-*.o
-.vagrant/
+
