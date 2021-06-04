@@ -124,7 +124,6 @@ fn efi_create_vcpu(system_table: &SystemTable<Boot>) -> uefi::Result<*mut hyperv
         (*tss_gdt_entry).reserved0 = 0;
 
         let _ = write!(uart, "VCPU info {:x?} {:x?}\r\n", *vcpu, vcpu);
-
     };
 
     Ok(uefi::Completion::new(Status::SUCCESS, vcpu))
@@ -137,7 +136,12 @@ extern "efiapi" fn efi_core_load(arg: *mut c_void) {
     let _ = write!(uart, "VCPU result {:x?}\r\n", vcpu_result);
     let vcpu_ptr = vcpu_result.unwrap().unwrap();
     unsafe {
-    let _ = write!(uart, "VCPU as ptr {:x?} {:x?}\r\n",  {&*vcpu_ptr}, vcpu_ptr);
+        let _ = write!(
+            uart,
+            "VCPU as ptr {:x?} {:x?}\r\n",
+            { &*vcpu_ptr },
+            vcpu_ptr
+        );
     }
 
     let vcpu = unsafe { &*vcpu_ptr };
@@ -160,21 +164,16 @@ fn efi_main(_image_handle: uefi::Handle, system_table: SystemTable<Boot>) -> Sta
         .expect("Completion failure");
     let mp_proto = unsafe { &mut *mp_proto.get() };
 
-    match mp_proto
-        .startup_all_aps(
-            false,
-            efi_core_load,
-            &system_table as *const SystemTable<Boot> as *mut c_void,
-            None,
-        ) {
-            Ok(_) => {
-                Status::SUCCESS
-            },
-            Err(e) => {
-                match e.status() {
-                    Status::NOT_STARTED => Status::SUCCESS,
-                    e => e,
-                }
-            }
-        }
+    match mp_proto.startup_all_aps(
+        false,
+        efi_core_load,
+        &system_table as *const SystemTable<Boot> as *mut c_void,
+        None,
+    ) {
+        Ok(_) => Status::SUCCESS,
+        Err(e) => match e.status() {
+            Status::NOT_STARTED => Status::SUCCESS,
+            e => e,
+        },
+    }
 }

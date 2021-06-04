@@ -309,7 +309,7 @@ fn prepare_vmx_memory_region(vmx_region: *mut u32, vmx_region_size: usize) {
     assert!(vmx_region_size > mem::size_of::<u32>());
 
     unsafe {
-        ptr::write_bytes(vmx_region, 0, vmx_region_size/core::mem::size_of::<u32>());
+        ptr::write_bytes(vmx_region, 0, vmx_region_size / core::mem::size_of::<u32>());
         ptr::write(vmx_region, get_vmcs_revision_identifier());
         trace!("Setting vmxon region identifier {:x}", *vmx_region);
     }
@@ -369,7 +369,11 @@ extern "C" {
 }
 
 pub fn load_vm(vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
-    trace!("Loading vmm with vcpu {:x?} {:x?}", vcpu, vcpu as *const VCpu);
+    trace!(
+        "Loading vmm with vcpu {:x?} {:x?}",
+        vcpu,
+        vcpu as *const VCpu
+    );
     assert!(is_page_aligned(vcpu.vmcs as u64));
     assert!(is_page_aligned(vcpu.vmcs_phys));
 
@@ -393,31 +397,28 @@ pub fn load_vm(vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
     trace!("Initializing guest state");
     vmcs::initialize_guest_state(vcpu)?;
 
-
     trace!("Launching...");
 
     crate::vmcs_dump::dump();
-    let guest_first_entry_result = unsafe {
-        _guest_first_entry()
-    };
+    let guest_first_entry_result = unsafe { _guest_first_entry() };
 
     match guest_first_entry_result {
         0 => {
             //trace!("Successfully entered the guest");
             Ok(())
-        },
+        }
         1 => {
             trace!("vmfailvalid");
             Err(x86::vmx::VmFail::VmFailValid)
-        },
+        }
         2 => {
             trace!("vmfailinvalid");
             Err(x86::vmx::VmFail::VmFailInvalid)
-        },
+        }
         other => {
             trace!("unknown guest entry code {:x}", other);
             Err(x86::vmx::VmFail::VmFailInvalid)
-        },
+        }
     }
 }
 

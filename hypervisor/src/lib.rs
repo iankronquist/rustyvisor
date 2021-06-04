@@ -12,8 +12,8 @@ mod msr;
 mod register_state;
 pub mod segmentation;
 mod vmcs;
-mod vmcs_fields;
 mod vmcs_dump;
+mod vmcs_fields;
 mod vmexit_handlers;
 pub mod vmx;
 
@@ -69,7 +69,11 @@ pub extern "C" fn rustyvisor_load() -> i32 {
 
 #[no_mangle]
 pub unsafe extern "C" fn rustyvisor_core_load(data: &VCpu) -> i32 {
-    trace!("VCPU in rustyvisor_core_load {:x?} {:x?}\r\n", data, data as *const VCpu);
+    trace!(
+        "VCPU in rustyvisor_core_load {:x?} {:x?}\r\n",
+        data,
+        data as *const VCpu
+    );
     trace!("Enabling vmx");
     if vmx::enable(
         data.vmxon_region,
@@ -81,7 +85,11 @@ pub unsafe extern "C" fn rustyvisor_core_load(data: &VCpu) -> i32 {
         error!("Failed to enable VMX");
         return -1;
     }
-    trace!("VCPU in rustyvisor_core_load enable {:x?} {:x?}\r\n", data, data as *const VCpu);
+    trace!(
+        "VCPU in rustyvisor_core_load enable {:x?} {:x?}\r\n",
+        data,
+        data as *const VCpu
+    );
 
     trace!("Vmx enabled");
     trace!("Loading vmm {:x?}", data);

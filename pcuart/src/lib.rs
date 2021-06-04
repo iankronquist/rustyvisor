@@ -90,8 +90,6 @@ impl fmt::Write for Uart {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     #[test]

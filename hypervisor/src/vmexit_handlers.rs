@@ -1,12 +1,12 @@
-use log::trace;
+use crate::register_state::GeneralPurposeRegisterState;
 use crate::vmcs_dump;
 use crate::vmcs_fields::VmcsField;
-use crate::vmx::{vmwrite,vmread};
-use crate::register_state::GeneralPurposeRegisterState;
+use crate::vmx::{vmread, vmwrite};
+use log::trace;
 
 #[no_mangle]
 pub extern "C" fn hypervisor_handle_vmexit(gprs: *mut GeneralPurposeRegisterState) {
-    let gprs = unsafe {&*gprs};
+    let gprs = unsafe { &*gprs };
     trace!("{:x?}", gprs);
     let vmexit_reasion = vmread(VmcsField::VmExitReason).expect("vm exit reason shouldn't error");
     let qualification = vmread(VmcsField::ExitQualificatIon).unwrap_or(0);
@@ -15,7 +15,10 @@ pub extern "C" fn hypervisor_handle_vmexit(gprs: *mut GeneralPurposeRegisterStat
     match vmexit_reasion {
         reason => {
             //vmcs_dump::dump();
-            panic!("Unhandled vm exit reason {:x} qualification {:x}", vmexit_reasion, qualification);
+            panic!(
+                "Unhandled vm exit reason {:x} qualification {:x}",
+                vmexit_reasion, qualification
+            );
         }
     }
     unimplemented!();

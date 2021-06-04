@@ -30,7 +30,8 @@ pub fn unpack_gdt_entry(gdt: &[GdtEntry], selector: u16) -> UnpackedGdtEntry {
     }
 
     unpacked.selector = selector;
-    unpacked.limit = u64::from(gdt[index].limit_low) | ((u64::from(gdt[index].granularity) & 0x0f) << 16);
+    unpacked.limit =
+        u64::from(gdt[index].limit_low) | ((u64::from(gdt[index].granularity) & 0x0f) << 16);
     unpacked.base = u64::from(gdt[index].base_low);
     unpacked.base = (u64::from(gdt[index].base_high) << 24)
         | (u64::from(gdt[index].base_middle) << 16)
@@ -81,10 +82,13 @@ pub fn get_current_gdt() -> &'static [GdtEntry] {
         x86::dtables::sgdt(&mut gdtr);
     }
     trace!("Gdtr is {:x?}", gdtr);
-    assert_ne!({gdtr.limit}, 0xdead);
+    assert_ne!({ gdtr.limit }, 0xdead);
     let bytes = usize::from(gdtr.limit) + 1;
     unsafe {
-        core::slice::from_raw_parts(gdtr.base as *const GdtEntry, bytes / core::mem::size_of::<GdtEntry>())
+        core::slice::from_raw_parts(
+            gdtr.base as *const GdtEntry,
+            bytes / core::mem::size_of::<GdtEntry>(),
+        )
     }
 }
 
