@@ -35,10 +35,15 @@ impl log::Log for UartLogger {
 
     fn log(&self, record: &log::Record) {
         if self.enabled(record.metadata()) {
-            let _ = write!(self.port.lock(), "{}: {}\r\n", record.level(), record.args());
+            let _ = write!(
+                self.port.lock(),
+                "{}: {}\r\n",
+                record.level(),
+                record.args()
+            );
         }
     }
-    fn flush(&self) { }
+    fn flush(&self) {}
 }
 
 pub fn fini() -> Result<(), log::SetLoggerError> {

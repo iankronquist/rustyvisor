@@ -91,12 +91,9 @@ fn efi_create_vcpu(system_table: &SystemTable<Boot>) -> uefi::Result<*mut hyperv
         (*vcpu).vmcs_size = PAGE_SIZE;
         (*vcpu).vmcs = efi_phys_to_virt((*vcpu).vmcs_phys);
 
-        system_table.boot_services().memset(
-            (*vcpu).vmcs as *mut u8,
-            (*vcpu).vmcs_size,
-            0
-        );
-
+        system_table
+            .boot_services()
+            .memset((*vcpu).vmcs as *mut u8, (*vcpu).vmcs_size, 0);
 
         (*vcpu).vmxon_region_phys = vmx_on_region_phys.expect("vmx on allocation");
         (*vcpu).vmxon_region_size = PAGE_SIZE;
@@ -105,7 +102,7 @@ fn efi_create_vcpu(system_table: &SystemTable<Boot>) -> uefi::Result<*mut hyperv
         system_table.boot_services().memset(
             (*vcpu).vmxon_region as *mut u8,
             (*vcpu).vmxon_region_size,
-            0
+            0,
         );
 
         (*vcpu).stack_base = efi_phys_to_virt(stack.expect("Stack"));
@@ -115,12 +112,9 @@ fn efi_create_vcpu(system_table: &SystemTable<Boot>) -> uefi::Result<*mut hyperv
         (*vcpu).host_gdt_base = host_gdt as *mut u64;
         (*vcpu).host_gdt_limit = host_gdt_size as u64 - 1;
 
-
-        system_table.boot_services().memset(
-            tss,
-            core::mem::size_of::<segmentation::Tss>(),
-            0
-        );
+        system_table
+            .boot_services()
+            .memset(tss, core::mem::size_of::<segmentation::Tss>(), 0);
         let tss_base = tss as u64;
         (*vcpu).tr_base = tss_base;
         (*vcpu).tr_selector =

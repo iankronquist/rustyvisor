@@ -25,8 +25,6 @@ pub const fn is_page_aligned(n: u64) -> bool {
     n.trailing_zeros() >= 12
 }
 
-
-
 pub fn vmread(field: VmcsField) -> Result<u64, x86::vmx::VmFail> {
     unsafe { x86::bits64::vmx::vmread(field as u32) }
 }
@@ -34,7 +32,6 @@ pub fn vmread(field: VmcsField) -> Result<u64, x86::vmx::VmFail> {
 pub fn vmwrite(field: VmcsField, val: u64) -> Result<(), x86::vmx::VmFail> {
     unsafe { x86::bits64::vmx::vmwrite(field as u32, val) }
 }
-
 
 /*
 
@@ -367,7 +364,7 @@ pub fn enable(
         Ok(()) => {
             trace!("vmxon succeeded");
             Ok(())
-        },
+        }
         Err(e) => {
             error!("vmxon failed {:x?}", e);
             Err(())
@@ -386,16 +383,19 @@ pub fn load_vm(vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
 
     trace!("Preparing vmx on region");
     prepare_vmx_memory_region(vcpu.vmcs, vcpu.vmcs_size);
-    
+
     trace!("Preparing vmcs");
     prepare_vmcs(vcpu.vmcs, vcpu.vmcs_size);
 
     trace!("vmclear");
-    unsafe { x86::bits64::vmx::vmclear(vcpu.vmcs_phys)?; }
+    unsafe {
+        x86::bits64::vmx::vmclear(vcpu.vmcs_phys)?;
+    }
 
     trace!("vmptrld");
-    unsafe { x86::bits64::vmx::vmptrld(vcpu.vmcs_phys)?; }
-
+    unsafe {
+        x86::bits64::vmx::vmptrld(vcpu.vmcs_phys)?;
+    }
 
     trace!("Initializing host state");
     vmcs::initialize_host_state(vcpu)?;

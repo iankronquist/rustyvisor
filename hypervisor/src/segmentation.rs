@@ -52,7 +52,6 @@ pub struct GdtEntry {
     pub access: u8,
     pub granularity: u8,
     pub base_high: u8,
-
 }
 
 #[allow(unused)]

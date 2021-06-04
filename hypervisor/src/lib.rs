@@ -5,7 +5,6 @@
 
 use ::log::{error, info, trace, LevelFilter};
 
-
 //pub mod runtime;
 mod interrupts;
 mod isr;
@@ -46,9 +45,8 @@ pub struct VCpu {
 
 #[no_mangle]
 pub extern "C" fn rustyvisor_load() -> i32 {
-
-        let logger_result = log::set_logger(&logger::LOGGER)
-                    .map(|()| log::set_max_level(LevelFilter::Trace));
+    let logger_result =
+        log::set_logger(&logger::LOGGER).map(|()| log::set_max_level(LevelFilter::Trace));
     // The log crate requires the stdlib to use log::set_logger. Use the unsafe version instead.
     //let logger_result = unsafe { ::log::set_logger_raw(|_filter| &logger::LOGGER) };
     match logger_result {
@@ -69,7 +67,6 @@ pub extern "C" fn rustyvisor_load() -> i32 {
 
 #[no_mangle]
 pub unsafe extern "C" fn rustyvisor_core_load(data: &VCpu) -> i32 {
-
     trace!("Enabling vmx");
     if vmx::enable(
         data.vmxon_region,
