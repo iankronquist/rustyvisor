@@ -1,9 +1,11 @@
+use log::trace;
+use x86;
 const GDT_ENTRY_ACCESS_PRESENT: u8 = 1 << 7;
 
 // Table 24-2 ch 24-4 vol 3c
 const VMX_INFO_SEGMENT_UNUSABLE: u32 = 1 << 16;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct UnpackedGdtEntry {
     pub base: u64,
     pub limit: u64,
@@ -23,11 +25,12 @@ pub fn unpack_gdt_entry(gdt: &[GdtEntry], selector: u16) -> UnpackedGdtEntry {
     let index: usize = usize::from(selector) / core::mem::size_of::<GdtEntry>();
     if index == 0 {
         unpacked.access_rights |= VMX_INFO_SEGMENT_UNUSABLE;
+        trace!("Unpacked {:x?}", unpacked);
         return unpacked;
     }
 
     unpacked.selector = selector;
-    unpacked.limit = lsl(selector & !0x3);
+    unpacked.limit = u64::from(gdt[index].limit_low) | ((u64::from(gdt[index].granularity) & 0x0f) << 16);
     unpacked.base = u64::from(gdt[index].base_low);
     unpacked.base = (u64::from(gdt[index].base_high) << 24)
         | (u64::from(gdt[index].base_middle) << 16)
@@ -40,9 +43,12 @@ pub fn unpack_gdt_entry(gdt: &[GdtEntry], selector: u16) -> UnpackedGdtEntry {
         unpacked.access_rights |= VMX_INFO_SEGMENT_UNUSABLE;
     }
 
+    trace!("Gdt entry {:x?}", gdt[index]);
+    trace!("Gdt entry unpacked {:x?}", unpacked);
     unpacked
 }
 
+#[derive(Debug, Clone, Copy)]
 #[allow(unused)]
 #[repr(packed)]
 pub struct GdtEntry {
@@ -67,29 +73,18 @@ pub struct GdtEntry64 {
     pub reserved0: u32,
 }
 
-pub fn lsl(selector: u16) -> u64 {
-    let limit: u64;
-    let selector = u32::from(selector);
-    unsafe {
-        asm!("lsl {selector:e}, {limit}", limit = out(reg) limit, selector = in(reg) selector );
-    }
-    limit
-}
-
-pub fn sgdt(gdt_desc: *mut GdtDescriptor) {
-    unsafe {
-        asm!(
-        "sgdt [{}]",
-        in(reg) (gdt_desc)
-        );
-    }
-}
-
 pub fn get_current_gdt() -> &'static [GdtEntry] {
-    let mut gdtr: GdtDescriptor = Default::default();
-    sgdt(&mut gdtr);
+    let mut gdtr: x86::dtables::DescriptorTablePointer<u64> = Default::default();
+    gdtr.base = 0xabad1dea as *mut u64;
+    gdtr.limit = 0xdead;
     unsafe {
-        core::slice::from_raw_parts(gdtr.base as *const GdtEntry, usize::from(gdtr.limit) + 1)
+        x86::dtables::sgdt(&mut gdtr);
+    }
+    trace!("Gdtr is {:x?}", gdtr);
+    assert_ne!({gdtr.limit}, 0xdead);
+    let bytes = usize::from(gdtr.limit) + 1;
+    unsafe {
+        core::slice::from_raw_parts(gdtr.base as *const GdtEntry, bytes / core::mem::size_of::<GdtEntry>())
     }
 }
 

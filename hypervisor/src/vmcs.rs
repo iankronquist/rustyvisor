@@ -7,7 +7,7 @@ use crate::vmx::{
 };
 use crate::VCpu;
 use core::convert::TryFrom;
-use log::warn;
+use log::{trace, warn};
 use x86;
 use x86::dtables;
 
@@ -48,10 +48,14 @@ pub fn initialize_host_state(vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
 }
 
 pub fn initialize_guest_state(_vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
+    trace!("initialize_guest_state");
+    vmwrite(VmcsField::VmcsLinkPointer, !0)?;
+
     let mut guest_idtr: dtables::DescriptorTablePointer<u64> = Default::default();
     unsafe {
         dtables::sidt(&mut guest_idtr);
     }
+    trace!("got idtr {:x?}", guest_idtr);
     vmwrite(VmcsField::GuestIdtrLimit, u64::from(guest_idtr.limit))?;
     vmwrite(VmcsField::GuestIdtrBase, guest_idtr.base as u64)?;
 
@@ -59,10 +63,12 @@ pub fn initialize_guest_state(_vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
     unsafe {
         dtables::sgdt(&mut guest_gdtr);
     }
+    trace!("got idtr {:x?}", guest_gdtr);
     vmwrite(VmcsField::GuestGdtrLimit, u64::from(guest_gdtr.limit))?;
     vmwrite(VmcsField::GuestGdtrBase, guest_gdtr.base as u64)?;
 
     let gdt = get_current_gdt();
+    trace!("got gdt {:x?}", gdt);
 
     let cs = x86::segmentation::cs();
     let cs_unpacked = unpack_gdt_entry(gdt, cs.bits());
@@ -72,7 +78,17 @@ pub fn initialize_guest_state(_vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
         VmcsField::GuestCsArBytes,
         u64::from(cs_unpacked.access_rights),
     )?;
-    vmwrite(VmcsField::GuestCsArBytes, cs_unpacked.base)?;
+    vmwrite(VmcsField::GuestCsBase, cs_unpacked.base)?;
+
+    let ds = x86::segmentation::ds();
+    let ds_unpacked = unpack_gdt_entry(gdt, ds.bits());
+    vmwrite(VmcsField::GuestDsSelector, u64::from(ds_unpacked.selector))?;
+    vmwrite(VmcsField::GuestDsLimit, ds_unpacked.limit)?;
+    vmwrite(
+        VmcsField::GuestDsArBytes,
+        u64::from(ds_unpacked.access_rights),
+    )?;
+    vmwrite(VmcsField::GuestDsBase, ds_unpacked.base)?;
 
     let es = x86::segmentation::es();
     let es_unpacked = unpack_gdt_entry(gdt, es.bits());
@@ -82,7 +98,7 @@ pub fn initialize_guest_state(_vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
         VmcsField::GuestEsArBytes,
         u64::from(es_unpacked.access_rights),
     )?;
-    vmwrite(VmcsField::GuestEsArBytes, es_unpacked.base)?;
+    vmwrite(VmcsField::GuestEsBase, es_unpacked.base)?;
 
     let fs = x86::segmentation::fs();
     let fs_unpacked = unpack_gdt_entry(gdt, fs.bits());
@@ -92,7 +108,7 @@ pub fn initialize_guest_state(_vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
         VmcsField::GuestFsArBytes,
         u64::from(fs_unpacked.access_rights),
     )?;
-    vmwrite(VmcsField::GuestFsArBytes, fs_unpacked.base)?;
+    vmwrite(VmcsField::GuestFsBase, fs_unpacked.base)?;
 
     let gs = x86::segmentation::gs();
     let gs_unpacked = unpack_gdt_entry(gdt, gs.bits());

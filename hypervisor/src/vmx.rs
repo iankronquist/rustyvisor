@@ -243,7 +243,7 @@ pub fn write_cr4(val: u64) {
 pub fn read_dr7() -> u64 {
     let ret: u64;
     unsafe {
-        asm!("mov dr7, {}", out(reg)(ret));
+        asm!("mov {}, dr7", out(reg)(ret));
     }
     ret
 }
@@ -291,8 +291,8 @@ fn set_lock_bit() -> Result<(), ()> {
         info!("Setting lock bit");
         wrmsr(
             Msr::Ia32FeatureControl,
-            high,
             low | IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT | IA32_FEATURE_CONTROL_LOCK_BIT,
+            high,
         );
         Ok(())
     } else if (low & IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT) == 0 {
@@ -309,21 +309,9 @@ fn prepare_vmx_memory_region(vmx_region: *mut u32, vmx_region_size: usize) {
     assert!(vmx_region_size > mem::size_of::<u32>());
 
     unsafe {
-        ptr::write_bytes(vmx_region, 0, vmx_region_size);
+        ptr::write_bytes(vmx_region, 0, vmx_region_size/core::mem::size_of::<u32>());
         ptr::write(vmx_region, get_vmcs_revision_identifier());
         trace!("Setting vmxon region identifier {:x}", *vmx_region);
-    }
-}
-
-fn prepare_vmcs(vmcs: *mut u32, vmcs_size: usize) {
-    assert!(!vmcs.is_null());
-    assert!(vmcs_size <= 0x1000);
-    assert!(vmcs_size > mem::size_of::<u32>());
-
-    unsafe {
-        ptr::write_bytes(vmcs, 0, vmcs_size);
-        ptr::write(vmcs, get_vmcs_revision_identifier());
-        trace!("Setting vmcs identifier {:x}", *vmcs);
     }
 }
 
@@ -376,16 +364,17 @@ pub fn disable() {
     unimplemented!();
 }
 
+extern "C" {
+    fn _guest_first_entry() -> usize;
+}
+
 pub fn load_vm(vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
-    trace!("Loading vmm");
+    trace!("Loading vmm with vcpu {:x?} {:x?}", vcpu, vcpu as *const VCpu);
     assert!(is_page_aligned(vcpu.vmcs as u64));
     assert!(is_page_aligned(vcpu.vmcs_phys));
 
-    trace!("Preparing vmx on region");
-    prepare_vmx_memory_region(vcpu.vmcs, vcpu.vmcs_size);
-
     trace!("Preparing vmcs");
-    prepare_vmcs(vcpu.vmcs, vcpu.vmcs_size);
+    prepare_vmx_memory_region(vcpu.vmcs, vcpu.vmcs_size);
 
     trace!("vmclear");
     unsafe {
@@ -397,29 +386,39 @@ pub fn load_vm(vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
         x86::bits64::vmx::vmptrld(vcpu.vmcs_phys)?;
     }
 
+    trace!("Initializing vm control values ");
+    vmcs::initialize_vm_control_values()?;
     trace!("Initializing host state");
     vmcs::initialize_host_state(vcpu)?;
     trace!("Initializing guest state");
     vmcs::initialize_guest_state(vcpu)?;
-    trace!("Initializing vm control values ");
-    vmcs::initialize_vm_control_values()?;
+
 
     trace!("Launching...");
-    unsafe { x86::bits64::vmx::vmlaunch() }.or_else(|launch_err| {
-        trace!("Launch failed");
-        match vmread(VmcsField::VmInstructionError) {
-            Ok(vm_instruction_error_number) => error!(
-                "Failed to launch VM because {} ({})",
-                vmcs::vm_instruction_error_number_message(vm_instruction_error_number),
-                vm_instruction_error_number
-            ),
-            Err(e) => error!("Couldn't read vm instruction err {:?}", e),
-        }
-        Err(launch_err)
-    })?;
 
-    trace!("Launch succeeded");
-    Ok(())
+    crate::vmcs_dump::dump();
+    let guest_first_entry_result = unsafe {
+        _guest_first_entry()
+    };
+
+    match guest_first_entry_result {
+        0 => {
+            //trace!("Successfully entered the guest");
+            Ok(())
+        },
+        1 => {
+            trace!("vmfailvalid");
+            Err(x86::vmx::VmFail::VmFailValid)
+        },
+        2 => {
+            trace!("vmfailinvalid");
+            Err(x86::vmx::VmFail::VmFailInvalid)
+        },
+        other => {
+            trace!("unknown guest entry code {:x}", other);
+            Err(x86::vmx::VmFail::VmFailInvalid)
+        },
+    }
 }
 
 pub fn unload_vm() {

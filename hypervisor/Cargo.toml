@@ -10,7 +10,9 @@ edition = "2018"
 spin = { version = "0.9" }
 log = { default-features = false, version = "0.4" }
 pcuart = { path= "../pcuart"}
-x86 = "0.39.0"
+#x86 = "0.39.0"
+x86 = { git = "https://github.com/iankronquist/rust-x86" }
+
 
 [features]
 runtime_tests = []

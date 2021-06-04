@@ -13,6 +13,7 @@ mod register_state;
 pub mod segmentation;
 mod vmcs;
 mod vmcs_fields;
+mod vmcs_dump;
 mod vmexit_handlers;
 pub mod vmx;
 
@@ -25,6 +26,7 @@ use serial_logger as logger;
 use pcuart::logger;
 //include!(concat!(env!("OUT_DIR"), "/version.rs"));
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct VCpu {
     pub vmxon_region: *mut u32,
@@ -67,6 +69,7 @@ pub extern "C" fn rustyvisor_load() -> i32 {
 
 #[no_mangle]
 pub unsafe extern "C" fn rustyvisor_core_load(data: &VCpu) -> i32 {
+    trace!("VCPU in rustyvisor_core_load {:x?} {:x?}\r\n", data, data as *const VCpu);
     trace!("Enabling vmx");
     if vmx::enable(
         data.vmxon_region,
@@ -78,13 +81,14 @@ pub unsafe extern "C" fn rustyvisor_core_load(data: &VCpu) -> i32 {
         error!("Failed to enable VMX");
         return -1;
     }
+    trace!("VCPU in rustyvisor_core_load enable {:x?} {:x?}\r\n", data, data as *const VCpu);
+
     trace!("Vmx enabled");
-    trace!("Loading vmm");
+    trace!("Loading vmm {:x?}", data);
     if vmx::load_vm(data).is_err() {
         error!("Failed to load VMX");
         return 1;
     }
-    info!("Successfully launched VM");
     0
 }
 

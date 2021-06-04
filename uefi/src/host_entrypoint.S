@@ -3,7 +3,6 @@
 .global _guest_first_entry
 _guest_first_entry:
 
-
     lea rdi, [rip+.guest_enters_here]
     mov rax, 0x0000681e // vmwrite Guest rip
     vmwrite rax, rdi
