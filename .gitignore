@@ -46,3 +46,5 @@ modules.order
 *.ko
 *.mod.c
 
+# Lock files used by bochs and others
+*.lock
