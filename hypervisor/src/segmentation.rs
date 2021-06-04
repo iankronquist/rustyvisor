@@ -5,10 +5,16 @@ const VMX_INFO_SEGMENT_UNUSABLE: u32 = 1 << 16;
 
 #[derive(Default)]
 pub struct UnpackedGdtEntry {
-    base: u64,
-    limit: u64,
-    access_rights: u32,
-    selector: u16,
+    pub base: u64,
+    pub limit: u64,
+    pub access_rights: u32,
+    pub selector: u16,
+}
+
+impl UnpackedGdtEntry {
+    pub fn is_usable(&self) -> bool {
+        self.access_rights != VMX_INFO_SEGMENT_UNUSABLE
+    }
 }
 
 pub fn unpack_gdt_entry(gdt: &[GdtEntry], selector: u16) -> UnpackedGdtEntry {
@@ -28,7 +34,7 @@ pub fn unpack_gdt_entry(gdt: &[GdtEntry], selector: u16) -> UnpackedGdtEntry {
         | u64::from(gdt[index].base_low);
 
     unpacked.access_rights = u32::from(gdt[index].access);
-    unpacked.access_rights |= (u32::from((gdt[index].granularity) & 0xf0) << 8);
+    unpacked.access_rights |= u32::from((gdt[index].granularity) & 0xf0) << 8;
     unpacked.access_rights &= 0xf0ff;
     if (gdt[index].access & GDT_ENTRY_ACCESS_PRESENT) == 0 {
         unpacked.access_rights |= VMX_INFO_SEGMENT_UNUSABLE;
@@ -37,17 +43,29 @@ pub fn unpack_gdt_entry(gdt: &[GdtEntry], selector: u16) -> UnpackedGdtEntry {
     unpacked
 }
 
+#[allow(unused)]
 #[repr(packed)]
-#[allow(dead_code)]
 pub struct GdtEntry {
-    limit_low: u16,
-    base_low: u16,
-    base_middle: u8,
-    access: u8,
-    granularity: u8,
-    base_high: u8,
-    base_highest: u32,
-    reserved0: u32,
+    pub limit_low: u16,
+    pub base_low: u16,
+    pub base_middle: u8,
+    pub access: u8,
+    pub granularity: u8,
+    pub base_high: u8,
+
+}
+
+#[allow(unused)]
+#[repr(packed)]
+pub struct GdtEntry64 {
+    pub limit_low: u16,
+    pub base_low: u16,
+    pub base_middle: u8,
+    pub access: u8,
+    pub granularity: u8,
+    pub base_high: u8,
+    pub base_highest: u32,
+    pub reserved0: u32,
 }
 
 pub fn lsl(selector: u16) -> u64 {
@@ -83,6 +101,7 @@ pub struct GdtDescriptor {
     pub base: u64,
 }
 
+#[allow(unused)]
 #[repr(packed)]
 pub struct Tss {
     reserved0: u32,

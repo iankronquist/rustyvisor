@@ -3,7 +3,8 @@
 #![feature(lang_items)]
 #![allow(unknown_lints)]
 
-use ::log::{error, info, log};
+use ::log::{error, info, trace, LevelFilter};
+
 
 //pub mod runtime;
 mod interrupts;
@@ -45,12 +46,16 @@ pub struct VCpu {
 
 #[no_mangle]
 pub extern "C" fn rustyvisor_load() -> i32 {
+
+        let logger_result = log::set_logger(&logger::LOGGER)
+                    .map(|()| log::set_max_level(LevelFilter::Trace));
     // The log crate requires the stdlib to use log::set_logger. Use the unsafe version instead.
-    let logger_result = unsafe { ::log::set_logger_raw(|_filter| &logger::LOGGER) };
+    //let logger_result = unsafe { ::log::set_logger_raw(|_filter| &logger::LOGGER) };
     match logger_result {
         Ok(()) => {}
         Err(_) => return -1,
     }
+    //::log::set_max_level(::log::LogLevelFilter::Trace);
 
     info!("{}", "Hello world");
 
@@ -64,8 +69,8 @@ pub extern "C" fn rustyvisor_load() -> i32 {
 
 #[no_mangle]
 pub unsafe extern "C" fn rustyvisor_core_load(data: &VCpu) -> i32 {
-    let data = &*data;
 
+    trace!("Enabling vmx");
     if vmx::enable(
         data.vmxon_region,
         data.vmxon_region_phys,
@@ -76,6 +81,8 @@ pub unsafe extern "C" fn rustyvisor_core_load(data: &VCpu) -> i32 {
         error!("Failed to enable VMX");
         return -1;
     }
+    trace!("Vmx enabled");
+    trace!("Loading vmm");
     if vmx::load_vm(data).is_err() {
         error!("Failed to load VMX");
         return 1;

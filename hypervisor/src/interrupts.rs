@@ -1,9 +1,9 @@
 use crate::isr;
-use core::mem;
 use spin::Mutex;
 
 use crate::register_state::InterruptCpuState;
 
+#[allow(unused)]
 #[derive(Copy, Clone, Default)]
 #[repr(packed)]
 struct IdtEntry {
@@ -18,16 +18,6 @@ struct IdtEntry {
 
 #[derive(Default)]
 pub struct Idt([IdtEntry; 20]);
-
-pub fn sidt(idt_desc: *mut IdtDescriptor) {
-    unsafe {
-        asm!(
-        "sidt [{}]]",
-        in(reg) idt_desc
-
-        );
-    }
-}
 
 impl IdtEntry {
     const fn new() -> Self {
@@ -90,12 +80,4 @@ pub fn init_interrupt_handlers(cs: u16) {
 pub struct IdtDescriptor {
     pub limit: u16,
     pub base: u64,
-}
-
-impl<'a> IdtDescriptor {
-    pub fn from_cpu() -> IdtDescriptor {
-        let mut current_idt_ptr: IdtDescriptor = Default::default();
-        sidt(&mut current_idt_ptr);
-        current_idt_ptr
-    }
 }

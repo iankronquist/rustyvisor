@@ -1,4 +1,5 @@
-use ::log::{error, info, log};
+use ::log::{error, info, trace};
+use x86;
 
 use core::{mem, ptr};
 
@@ -24,51 +25,18 @@ pub const fn is_page_aligned(n: u64) -> bool {
     n.trailing_zeros() >= 12
 }
 
-pub fn vmxon(addr: u64) -> Result<(), u32> {
-    let ret: u32;
-    unsafe {
-        asm!(
-        "xor eax, eax; \
-         vmxon [{vmxon_region_phys}]; \
-         setc ah; \
-         setz al;",
-        vmxon_region_phys = in(reg) addr,
-        lateout("eax")(ret),
-        );
-    }
-    if ret == 0 {
-        Ok(())
-    } else {
-        Err(ret)
-    }
+
+
+pub fn vmread(field: VmcsField) -> Result<u64, x86::vmx::VmFail> {
+    unsafe { x86::bits64::vmx::vmread(field as u32) }
 }
 
-pub fn vmxoff() {
-    unsafe {
-        asm!("vmxoff");
-    }
+pub fn vmwrite(field: VmcsField, val: u64) -> Result<(), x86::vmx::VmFail> {
+    unsafe { x86::bits64::vmx::vmwrite(field as u32, val) }
 }
 
-pub fn vmread(field: VmcsField) -> Result<u64, u32> {
-    let ret: u32;
-    let val: u64;
-    unsafe {
-        asm!(
-        "xor eax, eax; \
-         vmread {value}, {field}; \
-         setc ah; \
-         setz al;",
-         value = out(reg) (val),
-         field = in(reg) (field as u64),
-         lateout("eax")(ret),
-        );
-    }
-    if ret == 0 {
-        Ok(val)
-    } else {
-        Err(ret)
-    }
-}
+
+/*
 
 pub fn vmwrite(field: VmcsField, val: u64) -> Result<(), u32> {
     let ret: u32;
@@ -80,7 +48,7 @@ pub fn vmwrite(field: VmcsField, val: u64) -> Result<(), u32> {
          setz al;",
          value = in(reg) (val),
          field = in(reg) (field as u64),
-         lateout("eax")(ret),
+         out("eax")(ret),
         );
     }
     if ret == 0 {
@@ -99,7 +67,7 @@ pub fn vmptrld(vmcs_phys: u64) -> Result<(), u32> {
          setc ah; \
          setz al;",
          vmcs_phys = in(reg) vmcs_phys,
-        lateout("eax")(ret),
+        out("eax")(ret),
         );
     }
     if ret == 0 {
@@ -118,7 +86,7 @@ pub fn vmclear(vmcs_phys: u64) -> Result<(), u32> {
          setc ah; \
          setz al;",
          vmcs_phys = in(reg) vmcs_phys,
-        lateout("eax")(ret),
+        out("eax")(ret),
         );
     }
     if ret == 0 {
@@ -138,7 +106,7 @@ pub fn vmptrst() -> Result<u64, u32> {
          setc ah; \
          setz al;",
          vmcs_phys = in(reg) vmcs_phys,
-        lateout("eax")(ret),
+        out("eax")(ret),
         );
     }
     if ret == 0 {
@@ -156,7 +124,7 @@ pub fn vmlaunch() -> Result<(), u32> {
         vmlaunch; \
          setc ah; \
          setz al;",
-            lateout("eax")(ret),
+            out("eax")(ret),
         );
     }
     if ret == 0 {
@@ -174,7 +142,7 @@ pub fn vmresume() -> Result<(), u32> {
             vmlaunch; \
              setc ah; \
              setz al;",
-            lateout("eax")(ret),
+            out("eax")(ret),
         );
     }
     if ret == 0 {
@@ -183,11 +151,12 @@ pub fn vmresume() -> Result<(), u32> {
         Err(ret)
     }
 }
+*/
 
 pub fn read_cs() -> u16 {
     let ret: u16;
     unsafe {
-        asm!("mov ax, cs", lateout("eax")(ret));
+        asm!("mov ax, cs", out("eax")(ret));
     }
     ret
 }
@@ -195,7 +164,7 @@ pub fn read_cs() -> u16 {
 pub fn read_ds() -> u16 {
     let ret: u16;
     unsafe {
-        asm!("mov ax, ds", lateout("eax")(ret));
+        asm!("mov ax, ds", out("eax")(ret));
     }
     ret
 }
@@ -203,7 +172,7 @@ pub fn read_ds() -> u16 {
 pub fn read_es() -> u16 {
     let ret: u16;
     unsafe {
-        asm!("mov ax, es", lateout("eax")(ret));
+        asm!("mov ax, es", out("eax")(ret));
     }
     ret
 }
@@ -211,7 +180,7 @@ pub fn read_es() -> u16 {
 pub fn read_fs() -> u16 {
     let ret: u16;
     unsafe {
-        asm!("mov ax, fs", lateout("eax")(ret));
+        asm!("mov ax, fs", out("eax")(ret));
     }
     ret
 }
@@ -219,7 +188,7 @@ pub fn read_fs() -> u16 {
 pub fn read_gs() -> u16 {
     let ret: u16;
     unsafe {
-        asm!("mov ax, gs", lateout("eax")(ret));
+        asm!("mov ax, gs", out("eax")(ret));
     }
     ret
 }
@@ -227,7 +196,7 @@ pub fn read_gs() -> u16 {
 pub fn read_ss() -> u16 {
     let ret: u16;
     unsafe {
-        asm!("mov ax, ss", lateout("eax")(ret));
+        asm!("mov ax, ss", out("eax")(ret));
     }
     ret
 }
@@ -235,7 +204,7 @@ pub fn read_ss() -> u16 {
 pub fn read_cr3() -> u64 {
     let ret: u64;
     unsafe {
-        asm!("mov {}, cr3", lateout(reg)(ret));
+        asm!("mov {}, cr3", out(reg)(ret));
     }
     ret
 }
@@ -243,7 +212,7 @@ pub fn read_cr3() -> u64 {
 pub fn read_cr4() -> u64 {
     let ret: u64;
     unsafe {
-        asm!("mov {}, cr4", lateout(reg)(ret));
+        asm!("mov {}, cr4", out(reg)(ret));
     }
     ret
 }
@@ -251,7 +220,7 @@ pub fn read_cr4() -> u64 {
 pub fn read_cr0() -> u64 {
     let ret: u64;
     unsafe {
-        asm!("mov {}, cr0", lateout(reg)(ret));
+        asm!("mov {}, cr0", out(reg)(ret));
     }
     ret
 }
@@ -274,10 +243,10 @@ pub fn write_cr4(val: u64) {
     }
 }
 
-pub fn read_db7() -> u64 {
+pub fn read_dr7() -> u64 {
     let ret: u64;
     unsafe {
-        asm!("mov db7, {}", lateout(reg)(ret));
+        asm!("mov dr7, {}", out(reg)(ret));
     }
     ret
 }
@@ -285,7 +254,7 @@ pub fn read_db7() -> u64 {
 pub fn read_flags() -> u64 {
     let ret: u64;
     unsafe {
-        asm!("pushf; pop {}", lateout(reg)(ret));
+        asm!("pushf; pop {}", out(reg)(ret));
     }
     ret
 }
@@ -320,15 +289,17 @@ fn set_cr4_bits() {
 }
 
 fn set_lock_bit() -> Result<(), ()> {
-    let (_high, low) = rdmsr(Msr::Ia32FeatureControl);
+    let (high, low) = rdmsr(Msr::Ia32FeatureControl);
     if (low & IA32_FEATURE_CONTROL_LOCK_BIT) == 0 {
+        info!("Setting lock bit");
         wrmsr(
             Msr::Ia32FeatureControl,
-            _high,
+            high,
             low | IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT | IA32_FEATURE_CONTROL_LOCK_BIT,
         );
         Ok(())
     } else if (low & IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT) == 0 {
+        error!("Lock bit is set but vmx is disabled. Hypervisor cannot start");
         Err(())
     } else {
         Ok(())
@@ -343,6 +314,19 @@ fn prepare_vmx_memory_region(vmx_region: *mut u32, vmx_region_size: usize) {
     unsafe {
         ptr::write_bytes(vmx_region, 0, vmx_region_size);
         ptr::write(vmx_region, get_vmcs_revision_identifier());
+        trace!("Setting vmxon region identifier {:x}", *vmx_region);
+    }
+}
+
+fn prepare_vmcs(vmcs: *mut u32, vmcs_size: usize) {
+    assert!(!vmcs.is_null());
+    assert!(vmcs_size <= 0x1000);
+    assert!(vmcs_size > mem::size_of::<u32>());
+
+    unsafe {
+        ptr::write_bytes(vmcs, 0, vmcs_size);
+        ptr::write(vmcs, get_vmcs_revision_identifier());
+        trace!("Setting vmcs identifier {:x}", *vmcs);
     }
 }
 
@@ -364,63 +348,87 @@ pub fn enable(
         return Err(());
     }
 
+    trace!("Setting lock bit");
     set_lock_bit().or_else(|_| {
         error!("Lock bit not set");
         Err(())
     })?;
 
+    trace!("Setting cr0 bits");
     set_cr0_bits();
+    trace!("Setting cr4 bits");
     set_cr4_bits();
 
+    trace!("Preparing vmxon region");
     prepare_vmx_memory_region(vmxon_region, vmxon_region_size);
 
-    let result = vmxon(vmxon_region_phys);
-    if result == Ok(()) {
-        info!("vmxon succeeded");
-        Ok(())
-    } else {
-        error!("vmxon failed");
-        Err(())
+    trace!("Doing vmxon");
+    match unsafe { x86::bits64::vmx::vmxon(vmxon_region_phys) } {
+        Ok(()) => {
+            trace!("vmxon succeeded");
+            Ok(())
+        },
+        Err(e) => {
+            error!("vmxon failed {:x?}", e);
+            Err(())
+        }
     }
 }
 
 pub fn disable() {
-    vmxoff();
-    info!("vmxoff");
+    unimplemented!();
 }
 
-pub fn load_vm(vcpu: &VCpu) -> Result<(), u32> {
+pub fn load_vm(vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
+    trace!("Loading vmm");
     assert!(is_page_aligned(vcpu.vmcs as u64));
     assert!(is_page_aligned(vcpu.vmcs_phys));
 
+    trace!("Preparing vmx on region");
     prepare_vmx_memory_region(vcpu.vmcs, vcpu.vmcs_size);
+    
+    trace!("Preparing vmcs");
+    prepare_vmcs(vcpu.vmcs, vcpu.vmcs_size);
 
-    vmptrld(vcpu.vmcs_phys)?;
-    vmclear(vcpu.vmcs_phys)?;
+    trace!("vmclear");
+    unsafe { x86::bits64::vmx::vmclear(vcpu.vmcs_phys)?; }
 
+    trace!("vmptrld");
+    unsafe { x86::bits64::vmx::vmptrld(vcpu.vmcs_phys)?; }
+
+
+    trace!("Initializing host state");
     vmcs::initialize_host_state(vcpu)?;
-    vmcs::initialize_guest_state();
+    trace!("Initializing guest state");
+    vmcs::initialize_guest_state(vcpu)?;
+    trace!("Initializing vm control values ");
     vmcs::initialize_vm_control_values()?;
 
-    vmlaunch().or_else(|_| {
+    trace!("Launching...");
+    unsafe { x86::bits64::vmx::vmlaunch() }.or_else(|launch_err| {
+        trace!("Launch failed");
         match vmread(VmcsField::VmInstructionError) {
             Ok(vm_instruction_error_number) => error!(
                 "Failed to launch VM because {} ({})",
                 vmcs::vm_instruction_error_number_message(vm_instruction_error_number),
                 vm_instruction_error_number
             ),
-            Err(e) => error!("VMLaunch failed with {}", e),
+            Err(e) => error!("Couldn't read vm instruction err {:?}", e),
         }
-        Err(!0u32)
+        Err(launch_err)
     })?;
 
+    trace!("Launch succeeded");
     Ok(())
 }
 
 pub fn unload_vm() {
+    /*
     if let Ok(vmcs_phys) = vmptrst() {
         if let Err(code) = vmclear(vmcs_phys) {
             error!("vmclear failed with error code {}", code);
         }
     }
+    */
+    unimplemented!();
 }

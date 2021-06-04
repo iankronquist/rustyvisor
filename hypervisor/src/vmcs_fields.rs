@@ -9,7 +9,7 @@ pub enum VmcsField {
     GuestCsSelector = 0x0000_0802,
     GuestSsSelector = 0x0000_0804,
     GuestDsSelector = 0x0000_0806,
-    GuestFSelector = 0x0000_0808,
+    GuestFsSelector = 0x0000_0808,
     GuestGsSelector = 0x0000_080a,
     GuestLdtrSelector = 0x0000_080c,
     GuestTrSelector = 0x0000_080e,

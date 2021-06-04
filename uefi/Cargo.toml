@@ -10,6 +10,7 @@ edition = "2018"
 hypervisor = { path = "../hypervisor" }
 uefi = "0.11.0"
 uefi-services = "0.8.0"
+pcuart = { path= "../pcuart"}
 
 [build-dependencies]
 cc = "1.0.25"

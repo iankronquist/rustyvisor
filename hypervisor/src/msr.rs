@@ -1,8 +1,10 @@
 #[allow(dead_code)]
+#[derive(Debug, Copy, Clone)]
 #[repr(u32)]
 pub enum Msr {
     EFER = 0xc000_0080,
     Ia32FeatureControl = 0x0000_003a,
+    Ia32DebugControl = 0x0000_01d9,
     Ia32VmxBasic = 0x0000_0480,
     Ia32VmxPinBasedControls = 0x0000_0481,
     Ia32VmxProcBasedControls = 0x0000_0482,
@@ -38,7 +40,7 @@ pub fn rdmsr(msr: Msr) -> (u32, u32) {
 }
 
 pub fn rdmsrl(msr: Msr) -> u64 {
-    let (eax, edx) = rdmsr(msr);
+    let (edx, eax) = rdmsr(msr);
     (u64::from(edx) << 32) | u64::from(eax)
 }
 

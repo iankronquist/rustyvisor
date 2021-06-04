@@ -49,10 +49,18 @@ pub extern "C" fn _Unwind_Resume() {
 }
 */
 
+use pcuart;
+
 #[no_mangle]
 #[panic_handler]
 pub extern "C" fn panic_fmt(info: &PanicInfo) -> ! {
+    let mut uart = pcuart::Uart::new(pcuart::UartComPort::Com1);
+    write!(uart, "panic\r\n");
     if let Some(location) = info.location() {
+    let mut uart = pcuart::Uart::new(pcuart::UartComPort::Com1);
+
+    write!(uart, "panic {}\r\n", location.file());
+    write!(uart, "panic {}\r\n", location.line());
         error!(
             "PANIC: {} {} {}",
             info.payload().downcast_ref::<&str>().unwrap(),

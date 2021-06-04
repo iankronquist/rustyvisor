@@ -28,19 +28,22 @@ impl UartLogger {
 }
 
 impl log::Log for UartLogger {
-    fn enabled(&self, metadata: &log::LogMetadata) -> bool {
-        metadata.level() <= log::LogLevel::Info
+    fn enabled(&self, _metadata: &log::Metadata) -> bool {
+        //metadata.level() <= log::Level::Trace
+        true
     }
 
-    fn log(&self, record: &log::LogRecord) {
+    fn log(&self, record: &log::Record) {
         if self.enabled(record.metadata()) {
-            let _ = writeln!(self.port.lock(), "{}: {}", record.level(), record.args());
+            let _ = write!(self.port.lock(), "{}: {}\r\n", record.level(), record.args());
         }
     }
+    fn flush(&self) { }
 }
 
-pub fn fini() -> Result<(), log::ShutdownLoggerError> {
-    log::shutdown_logger_raw().map(|_logger| {})
+pub fn fini() -> Result<(), log::SetLoggerError> {
+    //log::shutdown_logger_raw().map(|_logger| {})
+    Ok(())
 }
 
 pub static LOGGER: UartLogger = UartLogger {
