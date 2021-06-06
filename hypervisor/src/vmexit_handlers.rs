@@ -64,7 +64,6 @@ fn handle_control_register_access(
     Ok(())
 }
 
-
 #[no_mangle]
 pub extern "C" fn hypervisor_handle_vmexit(gprs: *mut GeneralPurposeRegisterState) {
     let gprs = unsafe { &mut *gprs };
@@ -73,7 +72,7 @@ pub extern "C" fn hypervisor_handle_vmexit(gprs: *mut GeneralPurposeRegisterStat
     match vmexit_reasion {
         VMEXIT_REASON_CONTROL_REGISTER_ACCESS => {
             handle_control_register_access(gprs).unwrap();
-        },
+        }
         /*
         VMEXIT_REASON_EXTERNAL_INTERRUPT => {
             trace!("Got external interrupt {:x?}", vmread(VmcsField::GuestRip));

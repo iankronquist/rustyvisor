@@ -77,11 +77,14 @@ fn efi_create_vcpu(system_table: &SystemTable<Boot>) -> uefi::Result<*mut hyperv
         stack_pages,
     )?;
 
-    let msr_bitmap = system_table.boot_services().allocate_pages(
-        uefi::table::boot::AllocateType::AnyPages,
-        MemoryType::RUNTIME_SERVICES_DATA,
-        1,
-    )?.expect("msr bitmap allocated");
+    let msr_bitmap = system_table
+        .boot_services()
+        .allocate_pages(
+            uefi::table::boot::AllocateType::AnyPages,
+            MemoryType::RUNTIME_SERVICES_DATA,
+            1,
+        )?
+        .expect("msr bitmap allocated");
 
     let gdt = hypervisor::segmentation::get_current_gdt();
     let original_gdt_size = gdt.len() * core::mem::size_of::<GdtEntry>();
@@ -130,11 +133,9 @@ fn efi_create_vcpu(system_table: &SystemTable<Boot>) -> uefi::Result<*mut hyperv
         );
 
         (*vcpu).msr_bitmap = msr_bitmap;
-        system_table.boot_services().memset(
-            efi_phys_to_virt((*vcpu).msr_bitmap),
-            PAGE_SIZE,
-            0,
-        );
+        system_table
+            .boot_services()
+            .memset(efi_phys_to_virt((*vcpu).msr_bitmap), PAGE_SIZE, 0);
 
         (*vcpu).stack_base = efi_phys_to_virt(stack.expect("Stack"));
         (*vcpu).stack_size = stack_pages * PAGE_SIZE; // Page size
