@@ -262,7 +262,8 @@ fn vmx_available() -> bool {
 }
 
 fn get_vmcs_revision_identifier() -> u32 {
-    let (_high_bits, vmcs_revision_identifier) = rdmsr(Msr::Ia32VmxBasic);
+    let pair = rdmsr(Msr::Ia32VmxBasic);
+    let vmcs_revision_identifier = pair.eax;
     assert!((vmcs_revision_identifier & (1 << 31)) == 0);
     vmcs_revision_identifier
 }
@@ -286,16 +287,13 @@ fn set_cr4_bits() {
 }
 
 fn set_lock_bit() -> Result<(), ()> {
-    let (high, low) = rdmsr(Msr::Ia32FeatureControl);
-    if (low & IA32_FEATURE_CONTROL_LOCK_BIT) == 0 {
+    let mut pair = rdmsr(Msr::Ia32FeatureControl);
+    if (pair.eax & IA32_FEATURE_CONTROL_LOCK_BIT) == 0 {
         info!("Setting lock bit");
-        wrmsr(
-            Msr::Ia32FeatureControl,
-            low | IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT | IA32_FEATURE_CONTROL_LOCK_BIT,
-            high,
-        );
+        pair.eax |= IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT | IA32_FEATURE_CONTROL_LOCK_BIT;
+        wrmsr(Msr::Ia32FeatureControl, pair);
         Ok(())
-    } else if (low & IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT) == 0 {
+    } else if (pair.eax & IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT) == 0 {
         error!("Lock bit is set but vmx is disabled. Hypervisor cannot start");
         Err(())
     } else {

@@ -1,7 +1,7 @@
 use crate::isr;
 use spin::Mutex;
 
-use crate::register_state::InterruptCpuState;
+use crate::register_state::InterruptRegisterState;
 
 #[allow(unused)]
 #[derive(Copy, Clone, Default)]
@@ -59,7 +59,7 @@ pub fn host_idt_base() -> u64 {
 }
 
 #[no_mangle]
-pub extern "C" fn interrupt_dispatcher(state: &mut InterruptCpuState) {
+pub extern "C" fn interrupt_dispatcher(state: &mut InterruptRegisterState) {
     panic!("Unhandled interrupt {:x?}", state);
 }
 

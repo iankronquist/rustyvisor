@@ -5,10 +5,10 @@
 
 use ::log::{error, info, trace, LevelFilter};
 
-//pub mod runtime;
 mod interrupts;
 mod isr;
 mod msr;
+mod panic;
 mod register_state;
 pub mod segmentation;
 mod vmcs;
@@ -16,19 +16,20 @@ mod vmcs_dump;
 mod vmcs_fields;
 mod vmexit_handlers;
 pub mod vmx;
-
-/*
-#[cfg(not(test))]
-mod serial_logger;
-#[cfg(not(test))]
-use serial_logger as logger;
-*/
+mod vcpu;
+pub mod interrupt_controller;
+mod vmexit_reasons;
+mod debug;
 use pcuart::logger;
-//include!(concat!(env!("OUT_DIR"), "/version.rs"));
+
+
+pub static LOGGER: logger::UartLogger = logger::UartLogger::new(pcuart::UartComPort::Com1);
+
 
 #[derive(Debug)]
 #[repr(C)]
 pub struct VCpu {
+    pub this_vcpu: *mut VCpu,
     pub vmxon_region: *mut u32,
     pub vmcs: *mut u32,
     pub vmxon_region_phys: u64,
@@ -43,21 +44,19 @@ pub struct VCpu {
     pub host_gdt_limit: u64,
     pub tr_base: u64,
     pub tr_selector: u16,
+    pub virtual_local_interrupt_controller: *mut interrupt_controller::VirtualLocalInterruptController,
 }
 
 #[no_mangle]
 pub extern "C" fn rustyvisor_load() -> i32 {
     let logger_result =
-        log::set_logger(&logger::LOGGER).map(|()| log::set_max_level(LevelFilter::Trace));
-    // The log crate requires the stdlib to use log::set_logger. Use the unsafe version instead.
-    //let logger_result = unsafe { ::log::set_logger_raw(|_filter| &logger::LOGGER) };
+        log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Trace));
     match logger_result {
         Ok(()) => {}
         Err(_) => return -1,
     }
-    //::log::set_max_level(::log::LogLevelFilter::Trace);
 
-    info!("{}", "Hello world");
+    info!("{}", "rustyvisor_load");
 
     interrupts::init_interrupt_handlers(vmx::read_cs());
 

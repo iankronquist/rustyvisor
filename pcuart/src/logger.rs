@@ -7,13 +7,13 @@ use spin::Mutex;
 pub struct UartLogger {
     port: Mutex<Uart>,
 }
-
+/*
 impl fmt::Write for UartLogger {
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
-        let mut port = self.port.lock();
+        let mut port = self.lock_port_with_timeout();
         port.write_str(s)
     }
-}
+}*/
 
 impl UartLogger {
     pub const fn new(port: UartComPort) -> Self {
@@ -24,6 +24,23 @@ impl UartLogger {
     pub fn init(&self) -> Result<(), log::SetLoggerError> {
         self.port.lock().init(false, UartBaudRate::Baud115200);
         Ok(())
+    }
+    
+    pub unsafe fn bust_locks(&self) {
+        self.port.force_unlock();
+    }
+
+    fn lock_port_with_timeout(&self) -> spin::MutexGuard<Uart> {
+        let timeout = 0x1000;
+        let mut count = 0;
+        while count < timeout {
+            if let Some(guard) = self.port.try_lock() {
+                return guard;
+            }
+            count += 1;
+        }
+        unsafe { self.bust_locks(); }
+        panic!("Timeout exceeded");
     }
 }
 
@@ -36,13 +53,14 @@ impl log::Log for UartLogger {
     fn log(&self, record: &log::Record) {
         if self.enabled(record.metadata()) {
             let _ = write!(
-                self.port.lock(),
+                self.lock_port_with_timeout(),
                 "{}: {}\r\n",
                 record.level(),
                 record.args()
             );
         }
     }
+
     fn flush(&self) {}
 }
 
@@ -50,7 +68,3 @@ pub fn fini() -> Result<(), log::SetLoggerError> {
     //log::shutdown_logger_raw().map(|_logger| {})
     Ok(())
 }
-
-pub static LOGGER: UartLogger = UartLogger {
-    port: Mutex::new(Uart::new(UartComPort::Com1)),
-};

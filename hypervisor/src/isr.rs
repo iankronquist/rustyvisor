@@ -1,3 +1,7 @@
+/// The type of an Interrupt Service Routine assembly stub.
+/// They are modeled as a no-return extern "C" function.
+/// They are not meant to be called directly by rust code.
+/// Instead, generate the appropriate interrupt.
 pub type InterruptServiceRoutine = unsafe extern "C" fn() -> !;
 
 extern "C" {
@@ -259,6 +263,7 @@ extern "C" {
     fn _isr255() -> !;
 }
 
+/// This table is used to iterate over the assocated ISRs when installing the Interrupt Descriptor Table.
 pub const ISR: [InterruptServiceRoutine; 256] = [
     _isr0, _isr1, _isr2, _isr3, _isr4, _isr5, _isr6, _isr7, _isr8, _isr9, _isr10, _isr11, _isr12,
     _isr13, _isr14, _isr15, _isr16, _isr17, _isr18, _isr19, _isr20, _isr21, _isr22, _isr23, _isr24,

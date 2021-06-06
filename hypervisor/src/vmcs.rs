@@ -1,10 +1,7 @@
 use crate::msr::{rdmsr, rdmsrl, Msr};
 use crate::segmentation::{get_current_gdt, unpack_gdt_entry};
 use crate::vmcs_fields::*;
-use crate::vmx::{
-    read_cr0, read_cr3, read_cr4, read_cs, read_dr7, read_ds, read_es, read_fs, read_gs, read_ss,
-    vmwrite,
-};
+use crate::vmx::{read_cr0, read_cr3, read_cr4, read_cs, read_dr7, read_ds, read_es, read_fs, read_gs, read_ss, vmread, vmwrite};
 use crate::VCpu;
 use core::convert::TryFrom;
 use log::{trace, warn};
@@ -177,7 +174,9 @@ pub fn initialize_guest_state(_vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
 
 pub fn adjust_value_based_on_msr(msr: Msr, controls: u64) -> u64 {
     let controls = u32::try_from(controls).expect("Controls should be a 32 bit field"); // 503 953 2390
-    let (fixed0, fixed1) = rdmsr(msr);
+    let pair = rdmsr(msr);
+    let fixed0 = pair.edx;
+    let fixed1 = pair.eax;
     if controls & fixed0 != controls {
         warn!(
             "Requested unsupported controls for msr {:?}, fixed0 {:x} fixed1 {:x} controls {:x}",
@@ -203,9 +202,16 @@ pub fn initialize_vm_control_values() -> Result<(), x86::vmx::VmFail> {
         VmcsField::PinBasedVmExecControl,
         adjust_value_based_on_msr(
             Msr::Ia32VmxPinBasedControls,
-            PinBasedControlsVmxPreemption | PinBasedControlsExternalInterruptExiting,
+            /*PinBasedControlsVmxPreemption | PinBasedControlsExternalInterruptExiting*/ 0,
         ),
     )?;
+
+    let pin = vmread(VmcsField::PinBasedVmExecControl)?;
+    if pin & PinBasedControlsExternalInterruptExiting != 0 {
+        warn!("External interrupt exiting enabled");
+    } else {
+        trace!("External interrupt exiting not enabled");
+    }
 
     vmwrite(VmcsField::VmxPreemptionTimerValue, 0xfffff)?;
 
@@ -213,10 +219,10 @@ pub fn initialize_vm_control_values() -> Result<(), x86::vmx::VmFail> {
         VmcsField::CpuBasedVmExecControl,
         adjust_value_based_on_msr(
             Msr::Ia32VmxProcBasedControls,
-            CpuBasedControlsMsrBitmaps
-                | CpuBasedControlsSecondaryEnable
-                | CpuBasedControlsIoBitmaps
-                | CpuBasedControlsIoExiting,
+            //CpuBasedControlsMsrBitmaps
+                CpuBasedControlsSecondaryEnable
+                //| CpuBasedControlsIoBitmaps
+                //| CpuBasedControlsIoExiting,
         ),
     )?;
 
@@ -224,7 +230,7 @@ pub fn initialize_vm_control_values() -> Result<(), x86::vmx::VmFail> {
         VmcsField::VmExitControls,
         adjust_value_based_on_msr(
             Msr::Ia32VmxExitControls,
-            VmExitIa32eMode | VmExitAcknowledgeInterruptOnExit | VmExitConcealVmxFromPt,
+            VmExitIa32eMode /*| VmExitAcknowledgeInterruptOnExit*/ | VmExitConcealVmxFromPt,
         ),
     )?;
 
@@ -232,11 +238,13 @@ pub fn initialize_vm_control_values() -> Result<(), x86::vmx::VmFail> {
         VmcsField::VmEntryControls,
         adjust_value_based_on_msr(Msr::Ia32VmxEntryControls, VmEntryIa32eMode),
     )?;
+
     Ok(())
 }
 
 pub fn vm_instruction_error_number_message(n: u64) -> &'static str {
     match n {
+        0 => "No error",
         1 => "VMALL executed in VMX root operation",
         2 => "VMCLEAR with invalid physical address",
         3 => "VMCLEAR with VMXON pointer",

@@ -4,7 +4,7 @@
 
 extern crate hypervisor;
 extern crate uefi;
-extern crate uefi_services;
+//extern crate uefi_services;
 
 extern crate pcuart;
 
@@ -21,6 +21,10 @@ use uefi::{prelude::*, table::boot::MemoryType};
 
 fn efi_phys_to_virt<T>(phys: u64) -> *mut T {
     phys as *mut T
+}
+
+extern "C" {
+    static __ImageBase: u8;
 }
 
 const PAGE_SIZE: usize = 0x1000;
@@ -44,6 +48,14 @@ fn efi_create_vcpu(system_table: &SystemTable<Boot>) -> uefi::Result<*mut hyperv
             core::mem::size_of::<hypervisor::segmentation::Tss>(),
         )?
         .expect("Allocation completed");
+
+    let virtual_local_interrupt_controller = system_table
+        .boot_services()
+        .allocate_pool(
+            MemoryType::RUNTIME_SERVICES_DATA,
+            core::mem::size_of::<hypervisor::interrupt_controller::VirtualLocalInterruptController>(),
+        )?
+        .expect("Allocation completed") as *mut hypervisor::interrupt_controller::VirtualLocalInterruptController;
 
     let vmx_on_region_phys = system_table.boot_services().allocate_pages(
         uefi::table::boot::AllocateType::AnyPages,
@@ -73,6 +85,8 @@ fn efi_create_vcpu(system_table: &SystemTable<Boot>) -> uefi::Result<*mut hyperv
         .expect("Completion failed?");
 
     unsafe {
+        (*vcpu).this_vcpu = vcpu;
+
         system_table.boot_services().memmove(
             host_gdt,
             &gdt as *const _ as *const u8,
@@ -84,6 +98,11 @@ fn efi_create_vcpu(system_table: &SystemTable<Boot>) -> uefi::Result<*mut hyperv
         (*vcpu).vmcs_phys = vmcs_phys.expect("vmcs allocation");
         (*vcpu).vmcs_size = PAGE_SIZE;
         (*vcpu).vmcs = efi_phys_to_virt((*vcpu).vmcs_phys);
+
+        (*vcpu).virtual_local_interrupt_controller = virtual_local_interrupt_controller;
+        system_table
+            .boot_services()
+            .memset((*vcpu).virtual_local_interrupt_controller as *mut u8, core::mem::size_of::<hypervisor::interrupt_controller::VirtualLocalInterruptController>(), 0);
 
         system_table
             .boot_services()
@@ -155,7 +174,11 @@ extern "efiapi" fn efi_core_load(arg: *mut c_void) {
 fn efi_main(_image_handle: uefi::Handle, system_table: SystemTable<Boot>) -> Status {
     hypervisor::rustyvisor_load();
 
+    let mut uart = pcuart::Uart::new(pcuart::UartComPort::Com1);
+    let _ = write!(uart, "Image handle {:x?}\r\n", unsafe { &__ImageBase as *const u8 } );
+
     efi_core_load(&system_table as *const SystemTable<Boot> as *mut c_void);
+    let _ = write!(uart, "efi_core_loaded\r\n");
 
     let mp_proto = system_table
         .boot_services()
@@ -164,16 +187,28 @@ fn efi_main(_image_handle: uefi::Handle, system_table: SystemTable<Boot>) -> Sta
         .expect("Completion failure");
     let mp_proto = unsafe { &mut *mp_proto.get() };
 
+    let _ = write!(uart, "startup all aps\r\n");
+
     match mp_proto.startup_all_aps(
         false,
         efi_core_load,
         &system_table as *const SystemTable<Boot> as *mut c_void,
         None,
     ) {
-        Ok(_) => Status::SUCCESS,
+        Ok(_) => {
+            let _ = write!(uart, "all aps started\r\n");
+            Status::SUCCESS
+        },
         Err(e) => match e.status() {
-            Status::NOT_STARTED => Status::SUCCESS,
-            e => e,
+            Status::NOT_STARTED => {
+            let _ = write!(uart, "no sibling aps (this is okay)\r\n");
+            Status::SUCCESS
+            },
+            e => {
+                let _ = write!(uart, "Error starting {:x?}\r\n", e);
+                e
+            },
         },
     }
+
 }

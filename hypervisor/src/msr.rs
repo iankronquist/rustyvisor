@@ -1,3 +1,5 @@
+
+/// The values of various Model Specific Registers.
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone)]
 #[repr(u32)]
@@ -25,7 +27,16 @@ pub enum Msr {
     Ia32VmxVmFunc = 0x0000_0491,
 }
 
-pub fn rdmsr(msr: Msr) -> (u32, u32) {
+/// Represents the value of an Model specific register.
+/// rdmsr returns the value with the high bits of the MSR in edx and the low bits in eax.
+/// wrmsr recieves the value similarly.
+pub struct MsrValuePair {
+    pub edx: u32,
+    pub eax: u32,
+}
+
+/// Read a model specific register as a pair of two values.
+pub fn rdmsr(msr: Msr) -> MsrValuePair {
     let edx: u32;
     let eax: u32;
     unsafe {
@@ -36,20 +47,22 @@ pub fn rdmsr(msr: Msr) -> (u32, u32) {
           in("ecx")(msr as u32)
         );
     }
-    (edx, eax)
+    MsrValuePair {edx, eax}
 }
 
+/// Read a model specific register as a single 64 bit value.
 pub fn rdmsrl(msr: Msr) -> u64 {
-    let (edx, eax) = rdmsr(msr);
-    (u64::from(edx) << 32) | u64::from(eax)
+    let pair = rdmsr(msr);
+    (u64::from(pair.edx) << 32) | u64::from(pair.eax)
 }
 
-pub fn wrmsr(msr: Msr, eax: u32, edx: u32) {
+/// Write to a model specific register.
+pub fn wrmsr(msr: Msr, pair: MsrValuePair) {
     unsafe {
         asm!(
         "wrmsr",
-         in("eax")(eax),
-          in("edx")(edx),
+         in("eax")(pair.eax),
+          in("edx")(pair.edx),
           in("ecx")(msr as u32)
         );
     }
