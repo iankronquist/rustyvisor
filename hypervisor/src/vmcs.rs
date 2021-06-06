@@ -189,7 +189,7 @@ pub fn adjust_value_based_on_msr(msr: Msr, controls: u64) -> u64 {
     u64::from(fixed1 | (controls & fixed0))
 }
 
-pub fn initialize_vm_control_values() -> Result<(), x86::vmx::VmFail> {
+pub fn initialize_vm_control_values(vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
     // Configure entry/exit and supported feature controls
     vmwrite(
         VmcsField::SecondaryVmExecControl,
@@ -222,7 +222,7 @@ pub fn initialize_vm_control_values() -> Result<(), x86::vmx::VmFail> {
         VmcsField::CpuBasedVmExecControl,
         adjust_value_based_on_msr(
             Msr::Ia32VmxProcBasedControls,
-            //CpuBasedControlsMsrBitmaps
+            CpuBasedControlsMsrBitmaps |
                 CpuBasedControlsSecondaryEnable
                 //| CpuBasedControlsIoBitmaps
                 //| CpuBasedControlsIoExiting,
@@ -241,6 +241,8 @@ pub fn initialize_vm_control_values() -> Result<(), x86::vmx::VmFail> {
         VmcsField::VmEntryControls,
         adjust_value_based_on_msr(Msr::Ia32VmxEntryControls, VmEntryIa32eMode),
     )?;
+
+    vmwrite(VmcsField::MsrBitmap, vcpu.msr_bitmap as u64)?;
 
     Ok(())
 }

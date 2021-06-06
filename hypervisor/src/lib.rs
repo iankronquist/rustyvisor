@@ -40,10 +40,11 @@ pub struct VCpu {
     pub stack_top: *mut u32,
     pub host_gdt_base: *mut u64,
     pub host_gdt_limit: u64,
-    pub tr_base: u64,
-    pub tr_selector: u16,
     pub virtual_local_interrupt_controller:
         *mut interrupt_controller::VirtualLocalInterruptController,
+    pub msr_bitmap: u64,
+    pub tr_base: u64,
+    pub tr_selector: u16,
 }
 
 #[no_mangle]

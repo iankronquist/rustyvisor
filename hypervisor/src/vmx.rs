@@ -390,7 +390,7 @@ pub fn load_vm(vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
     }
 
     trace!("Initializing vm control values ");
-    vmcs::initialize_vm_control_values()?;
+    vmcs::initialize_vm_control_values(vcpu)?;
     trace!("Initializing host state");
     vmcs::initialize_host_state(vcpu)?;
     trace!("Initializing guest state");
