@@ -50,4 +50,3 @@ fn use_direct() -> Result<(), Box<dyn Error>> {
     println!("cargo:rustc-link-lib=static=asm");
     Ok(())
 }
-

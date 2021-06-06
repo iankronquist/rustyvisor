@@ -154,7 +154,6 @@ fn efi_create_vcpu(system_table: &SystemTable<Boot>) -> uefi::Result<*mut hyperv
         (*tss_gdt_entry).base_high = (tss_base >> 24) as u8;
         (*tss_gdt_entry).base_highest = (tss_base >> 32) as u32;
         (*tss_gdt_entry).reserved0 = 0;
-
     };
 
     Ok(uefi::Completion::new(Status::SUCCESS, vcpu))
@@ -181,23 +180,16 @@ fn efi_main(_image_handle: uefi::Handle, system_table: SystemTable<Boot>) -> Sta
         .expect("Completion failure");
     let mp_proto = unsafe { &mut *mp_proto.get() };
 
-
     match mp_proto.startup_all_aps(
         false,
         efi_core_load,
         &system_table as *const SystemTable<Boot> as *mut c_void,
         None,
     ) {
-        Ok(_) => {
-            Status::SUCCESS
-        }
+        Ok(_) => Status::SUCCESS,
         Err(e) => match e.status() {
-            Status::NOT_STARTED => {
-                Status::SUCCESS
-            }
-            e => {
-                e
-            }
+            Status::NOT_STARTED => Status::SUCCESS,
+            e => e,
         },
     }
 }

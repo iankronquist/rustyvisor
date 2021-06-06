@@ -1,5 +1,5 @@
 #![cfg(not(test))]
-    
+
 use core::sync::atomic;
 
 use core::panic::PanicInfo;

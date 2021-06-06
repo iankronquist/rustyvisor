@@ -23,7 +23,8 @@ pub mod vmx;
 use pcuart::logger;
 
 pub static LOGGER: logger::UartLogger = logger::UartLogger::new(pcuart::UartComPort::Com1);
-pub static UNSYNCHRONIZED_LOGGER: logger::UnsynchronizedUartLogger = logger::UnsynchronizedUartLogger::new(pcuart::UartComPort::Com1);
+pub static UNSYNCHRONIZED_LOGGER: logger::UnsynchronizedUartLogger =
+    logger::UnsynchronizedUartLogger::new(pcuart::UartComPort::Com1);
 
 #[derive(Debug)]
 #[repr(C)]

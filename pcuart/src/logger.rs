@@ -20,9 +20,7 @@ pub struct UnsynchronizedUartLogger {
 impl UnsynchronizedUartLogger {
     /// Creates a new UnsynchronizedUartLogger for the provided serial port.
     pub const fn new(port: UartComPort) -> Self {
-        Self {
-            port,
-        }
+        Self { port }
     }
 }
 
@@ -87,15 +85,9 @@ impl log::Log for UnsynchronizedUartLogger {
     fn log(&self, record: &log::Record) {
         if self.enabled(record.metadata()) {
             let mut uart = Uart::new(self.port);
-            let _ = write!(
-                uart,
-                "{}: {}\r\n",
-                record.level(),
-                record.args()
-            );
+            let _ = write!(uart, "{}: {}\r\n", record.level(), record.args());
         }
     }
 
     fn flush(&self) {}
 }
-
