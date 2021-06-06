@@ -5,26 +5,24 @@
 
 use ::log::{error, info, trace, LevelFilter};
 
+mod debug;
+pub mod interrupt_controller;
 mod interrupts;
 mod isr;
 mod msr;
 mod panic;
 mod register_state;
 pub mod segmentation;
+mod vcpu;
 mod vmcs;
 mod vmcs_dump;
 mod vmcs_fields;
 mod vmexit_handlers;
-pub mod vmx;
-mod vcpu;
-pub mod interrupt_controller;
 mod vmexit_reasons;
-mod debug;
+pub mod vmx;
 use pcuart::logger;
 
-
 pub static LOGGER: logger::UartLogger = logger::UartLogger::new(pcuart::UartComPort::Com1);
-
 
 #[derive(Debug)]
 #[repr(C)]
@@ -44,13 +42,13 @@ pub struct VCpu {
     pub host_gdt_limit: u64,
     pub tr_base: u64,
     pub tr_selector: u16,
-    pub virtual_local_interrupt_controller: *mut interrupt_controller::VirtualLocalInterruptController,
+    pub virtual_local_interrupt_controller:
+        *mut interrupt_controller::VirtualLocalInterruptController,
 }
 
 #[no_mangle]
 pub extern "C" fn rustyvisor_load() -> i32 {
-    let logger_result =
-        log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Trace));
+    let logger_result = log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Trace));
     match logger_result {
         Ok(()) => {}
         Err(_) => return -1,

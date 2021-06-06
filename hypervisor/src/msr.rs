@@ -1,4 +1,3 @@
-
 /// The values of various Model Specific Registers.
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone)]
@@ -47,7 +46,7 @@ pub fn rdmsr(msr: Msr) -> MsrValuePair {
           in("ecx")(msr as u32)
         );
     }
-    MsrValuePair {edx, eax}
+    MsrValuePair { edx, eax }
 }
 
 /// Read a model specific register as a single 64 bit value.

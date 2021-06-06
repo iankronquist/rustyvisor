@@ -290,7 +290,8 @@ fn set_lock_bit() -> Result<(), ()> {
     let mut pair = rdmsr(Msr::Ia32FeatureControl);
     if (pair.eax & IA32_FEATURE_CONTROL_LOCK_BIT) == 0 {
         info!("Setting lock bit");
-        pair.eax |= IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT | IA32_FEATURE_CONTROL_LOCK_BIT;
+        pair.eax |=
+            IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT | IA32_FEATURE_CONTROL_LOCK_BIT;
         wrmsr(Msr::Ia32FeatureControl, pair);
         Ok(())
     } else if (pair.eax & IA32_FEATURE_CONTROL_VMX_ENABLED_OUTSIDE_SMX_BIT) == 0 {

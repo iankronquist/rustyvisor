@@ -25,7 +25,7 @@ impl UartLogger {
         self.port.lock().init(false, UartBaudRate::Baud115200);
         Ok(())
     }
-    
+
     pub unsafe fn bust_locks(&self) {
         self.port.force_unlock();
     }
@@ -39,7 +39,9 @@ impl UartLogger {
             }
             count += 1;
         }
-        unsafe { self.bust_locks(); }
+        unsafe {
+            self.bust_locks();
+        }
         panic!("Timeout exceeded");
     }
 }

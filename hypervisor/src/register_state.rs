@@ -22,7 +22,6 @@ pub struct GeneralPurposeRegisterState {
 }
 
 impl GeneralPurposeRegisterState {
-
     /// Returns a mutable reference to a register in the GeneralPurposeRegisterState or None if that register is not in the state.
     /// Note that rsp is note in GeneralPurposeRegisterState.
     ///
@@ -47,7 +46,7 @@ impl GeneralPurposeRegisterState {
             0xd => Some(&mut self.r13),
             0xe => Some(&mut self.r14),
             0xf => Some(&mut self.r15),
-            _=> panic!("Illegal value"),
+            _ => panic!("Illegal value"),
         }
     }
 }

@@ -1,7 +1,10 @@
 use crate::msr::{rdmsr, rdmsrl, Msr};
 use crate::segmentation::{get_current_gdt, unpack_gdt_entry};
 use crate::vmcs_fields::*;
-use crate::vmx::{read_cr0, read_cr3, read_cr4, read_cs, read_dr7, read_ds, read_es, read_fs, read_gs, read_ss, vmread, vmwrite};
+use crate::vmx::{
+    read_cr0, read_cr3, read_cr4, read_cs, read_dr7, read_ds, read_es, read_fs, read_gs, read_ss,
+    vmread, vmwrite,
+};
 use crate::VCpu;
 use core::convert::TryFrom;
 use log::{trace, warn};

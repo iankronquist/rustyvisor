@@ -1,4 +1,3 @@
-
 /// A breakpoint function for debuggers to hook.
 ///
 /// This does NOT generate an int 3 breakpoint instruction.
@@ -8,5 +7,7 @@
 pub fn breakpoint() {
     // If feature inline asm...
     // Bochs magic breakpoint.
-    unsafe { asm!("xchg bx, bx"); }
+    unsafe {
+        asm!("xchg bx, bx");
+    }
 }

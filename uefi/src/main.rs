@@ -53,9 +53,11 @@ fn efi_create_vcpu(system_table: &SystemTable<Boot>) -> uefi::Result<*mut hyperv
         .boot_services()
         .allocate_pool(
             MemoryType::RUNTIME_SERVICES_DATA,
-            core::mem::size_of::<hypervisor::interrupt_controller::VirtualLocalInterruptController>(),
+            core::mem::size_of::<hypervisor::interrupt_controller::VirtualLocalInterruptController>(
+            ),
         )?
-        .expect("Allocation completed") as *mut hypervisor::interrupt_controller::VirtualLocalInterruptController;
+        .expect("Allocation completed")
+        as *mut hypervisor::interrupt_controller::VirtualLocalInterruptController;
 
     let vmx_on_region_phys = system_table.boot_services().allocate_pages(
         uefi::table::boot::AllocateType::AnyPages,
@@ -100,9 +102,12 @@ fn efi_create_vcpu(system_table: &SystemTable<Boot>) -> uefi::Result<*mut hyperv
         (*vcpu).vmcs = efi_phys_to_virt((*vcpu).vmcs_phys);
 
         (*vcpu).virtual_local_interrupt_controller = virtual_local_interrupt_controller;
-        system_table
-            .boot_services()
-            .memset((*vcpu).virtual_local_interrupt_controller as *mut u8, core::mem::size_of::<hypervisor::interrupt_controller::VirtualLocalInterruptController>(), 0);
+        system_table.boot_services().memset(
+            (*vcpu).virtual_local_interrupt_controller as *mut u8,
+            core::mem::size_of::<hypervisor::interrupt_controller::VirtualLocalInterruptController>(
+            ),
+            0,
+        );
 
         system_table
             .boot_services()
@@ -175,7 +180,9 @@ fn efi_main(_image_handle: uefi::Handle, system_table: SystemTable<Boot>) -> Sta
     hypervisor::rustyvisor_load();
 
     let mut uart = pcuart::Uart::new(pcuart::UartComPort::Com1);
-    let _ = write!(uart, "Image handle {:x?}\r\n", unsafe { &__ImageBase as *const u8 } );
+    let _ = write!(uart, "Image handle {:x?}\r\n", unsafe {
+        &__ImageBase as *const u8
+    });
 
     efi_core_load(&system_table as *const SystemTable<Boot> as *mut c_void);
     let _ = write!(uart, "efi_core_loaded\r\n");
@@ -198,17 +205,16 @@ fn efi_main(_image_handle: uefi::Handle, system_table: SystemTable<Boot>) -> Sta
         Ok(_) => {
             let _ = write!(uart, "all aps started\r\n");
             Status::SUCCESS
-        },
+        }
         Err(e) => match e.status() {
             Status::NOT_STARTED => {
-            let _ = write!(uart, "no sibling aps (this is okay)\r\n");
-            Status::SUCCESS
-            },
+                let _ = write!(uart, "no sibling aps (this is okay)\r\n");
+                Status::SUCCESS
+            }
             e => {
                 let _ = write!(uart, "Error starting {:x?}\r\n", e);
                 e
-            },
+            }
         },
     }
-
 }

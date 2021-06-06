@@ -8,7 +8,6 @@ use crate::{
     vmx::{vmread, vmwrite},
 };
 
-
 const VM_PREEMPTION_TIMER_VALUE: u64 = 0xffff;
 const INTERRUPT_COUNT: usize = 256;
 pub struct VirtualLocalInterruptController {
@@ -24,10 +23,12 @@ fn get_local_interrupt_controller() -> &'static mut VirtualLocalInterruptControl
 
 fn delay_interrupt_delivery(interrupt_number: u64) {
     let interrupt_controller = get_local_interrupt_controller();
-    let count =
-        &mut interrupt_controller.delayed_delivery_interrupts[interrupt_number as usize];
+    let count = &mut interrupt_controller.delayed_delivery_interrupts[interrupt_number as usize];
     *count += 1;
-    interrupt_controller.total_interrupts_count = interrupt_controller.total_interrupts_count.checked_add(1).unwrap();
+    interrupt_controller.total_interrupts_count = interrupt_controller
+        .total_interrupts_count
+        .checked_add(1)
+        .unwrap();
 }
 
 fn check_for_highest_priority_interrupt() -> Option<u64> {
@@ -48,7 +49,6 @@ fn check_for_highest_priority_interrupt() -> Option<u64> {
     }
     unreachable!();
 }
-
 
 // See 33.3.3.4 Generation of Virtual Interrupt Events by VMM
 fn vmx_is_guest_interruptable() -> bool {
@@ -73,8 +73,7 @@ fn vmx_inject_interrupt_into_guest(vector: u64) -> Result<(), x86::vmx::VmFail> 
 }
 
 fn vmx_configure_interrupts_wakeup() {
-    let pair =
-        msr::rdmsr(msr::Msr::Ia32VmxProcBasedControls);
+    let pair = msr::rdmsr(msr::Msr::Ia32VmxProcBasedControls);
     let disallowed_exit_values = pair.edx;
 
     // If we are allowed to set interrupt window exiting, set it.
@@ -94,7 +93,11 @@ fn vmx_configure_interrupts_wakeup() {
         } else {
             local_interrupt_controller.we_should_disable_preemption_timer = false;
         }
-        vmwrite(VmcsField::VmxPreemptionTimerValue, VM_PREEMPTION_TIMER_VALUE).unwrap();
+        vmwrite(
+            VmcsField::VmxPreemptionTimerValue,
+            VM_PREEMPTION_TIMER_VALUE,
+        )
+        .unwrap();
         local_interrupt_controller.requested_poll_of_interrupts_on_next_preemption_timer = true;
     }
 }
@@ -129,17 +132,22 @@ pub fn received_external_interrupt() -> Result<(), x86::vmx::VmFail> {
 
 pub fn received_preemption_timer() -> Result<(), x86::vmx::VmFail> {
     let local_interrupt_controller = get_local_interrupt_controller();
-    if local_interrupt_controller.requested_poll_of_interrupts_on_next_preemption_timer && vmx_is_guest_interruptable() {
+    if local_interrupt_controller.requested_poll_of_interrupts_on_next_preemption_timer
+        && vmx_is_guest_interruptable()
+    {
         if let Some(interrupt_number) = check_for_highest_priority_interrupt() {
             trace!("Delivering interrupt into guest");
             vmx_inject_interrupt_into_guest(interrupt_number as u64)?;
         }
 
-        if local_interrupt_controller.total_interrupts_count == 0  && local_interrupt_controller.we_should_disable_preemption_timer {
+        if local_interrupt_controller.total_interrupts_count == 0
+            && local_interrupt_controller.we_should_disable_preemption_timer
+        {
             trace!("No more external interrupts cached and we should disable the preemption timer, disabling interrupt window exiting");
             vmx_deconfigure_timer_wakeup()?;
             local_interrupt_controller.we_should_disable_preemption_timer = false;
-            local_interrupt_controller.requested_poll_of_interrupts_on_next_preemption_timer = false;
+            local_interrupt_controller.requested_poll_of_interrupts_on_next_preemption_timer =
+                false;
         }
     }
     Ok(())
