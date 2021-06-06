@@ -3,7 +3,7 @@
 set -x
 set -e
 
-make
-make test
-cargo clippy -- -W clippy::all
-cargo fmt -- --check
+cargo +nightly build --target x86_64-unknown-uefi
+
+#cargo clippy -- -W clippy::all --target x86_64-unknown-uefi
+cargo fmt --all -- --check

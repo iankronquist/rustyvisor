@@ -1,11 +1,5 @@
 use core::ops;
 use vmx;
-use cpu;
-use core::sync::atomic::{AtomicUsize, AtomicBool, ATOMIC_BOOL_INIT, Ordering};
-
-lazy_static! {
-    static ref CLI_COUNT: cpu::PerCoreVariable<AtomicUsize> = Default::default();
-}
 
 
 pub fn are_interrupts_enabled() -> bool {
@@ -16,7 +10,7 @@ pub fn are_interrupts_enabled() -> bool {
 #[cfg(not(test))]
 pub fn cli() {
     unsafe {
-        asm!("cli" : : :);
+        asm!("cli");
     }
 }
 
@@ -28,7 +22,7 @@ pub fn cli() {}
 #[cfg(not(test))]
 pub fn sti() {
     unsafe {
-        asm!("sti" : : :);
+        asm!("sti");
     }
 }
 
@@ -45,13 +39,13 @@ pub struct ClearLocalInterrupts<T> {
 
 pub struct ClearLocalInterruptsGuard<'a, T: 'a> {
     guarded: &'a T,
-    acquired: AtomicBool,
+    acquired: bool,
 }
 
 
 pub struct ClearLocalInterruptsGuardMut<'a, T: 'a> {
     guarded: &'a mut T,
-    acquired: AtomicBool,
+    acquired: bool,
 }
 
 
@@ -62,17 +56,19 @@ impl<T> ClearLocalInterrupts<T> {
     }
 
     pub fn cli_mut(&mut self) -> ClearLocalInterruptsGuardMut<T> {
+        cli();
         ClearLocalInterruptsGuardMut {
             guarded: &mut self.guarded,
-            acquired: ATOMIC_BOOL_INIT,
+            acquired: are_interrupts_enabled(),
         }
     }
 
 
     pub fn cli(&self) -> ClearLocalInterruptsGuard<T> {
+        cli();
         ClearLocalInterruptsGuard {
             guarded: &self.guarded,
-            acquired: ATOMIC_BOOL_INIT,
+            acquired: are_interrupts_enabled(),
         }
     }
 }
@@ -81,10 +77,6 @@ impl<T> ClearLocalInterrupts<T> {
 impl<'a, T> ops::Deref for ClearLocalInterruptsGuard<'a, T> {
     type Target = T;
     fn deref(&self) -> &T {
-        if !self.acquired.compare_and_swap(false, true, Ordering::AcqRel) &&
-           CLI_COUNT.get().fetch_add(1, Ordering::AcqRel) == 0 {
-            cli();
-        }
         self.guarded
     }
 }
@@ -93,10 +85,6 @@ impl<'a, T> ops::Deref for ClearLocalInterruptsGuard<'a, T> {
 impl<'a, T> ops::Deref for ClearLocalInterruptsGuardMut<'a, T> {
     type Target = T;
     fn deref(&self) -> &T {
-        if !self.acquired.compare_and_swap(false, true, Ordering::AcqRel) &&
-           CLI_COUNT.get().fetch_add(1, Ordering::AcqRel) == 0 {
-            cli();
-        }
         self.guarded
     }
 }
@@ -104,10 +92,6 @@ impl<'a, T> ops::Deref for ClearLocalInterruptsGuardMut<'a, T> {
 
 impl<'a, T> ops::DerefMut for ClearLocalInterruptsGuardMut<'a, T> {
     fn deref_mut(&mut self) -> &mut T {
-        if !self.acquired.compare_and_swap(false, true, Ordering::AcqRel) &&
-           CLI_COUNT.get().fetch_add(1, Ordering::AcqRel) == 0 {
-            cli();
-        }
         self.guarded
     }
 }
@@ -115,7 +99,7 @@ impl<'a, T> ops::DerefMut for ClearLocalInterruptsGuardMut<'a, T> {
 
 impl<'a, T> Drop for ClearLocalInterruptsGuard<'a, T> {
     fn drop(&mut self) {
-        if CLI_COUNT.get().fetch_sub(1, Ordering::AcqRel) == 1 {
+        if self.acquired {
             sti();
         }
     }
@@ -124,7 +108,7 @@ impl<'a, T> Drop for ClearLocalInterruptsGuard<'a, T> {
 
 impl<'a, T> Drop for ClearLocalInterruptsGuardMut<'a, T> {
     fn drop(&mut self) {
-        if CLI_COUNT.get().fetch_sub(1, Ordering::AcqRel) == 1 {
+        if self.acquired {
             sti();
         }
     }

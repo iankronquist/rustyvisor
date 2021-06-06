@@ -1,0 +1,13 @@
+[package]
+name = "pcuart"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+spin = { version = "0.9" }
+log = { default-features = false, version = "0.4" }
+#x86 = "0.39.0"
+x86 = { git = "https://github.com/iankronquist/rust-x86" }
+
