@@ -1,19 +1,12 @@
 use log;
 
 use super::{Uart, UartBaudRate, UartComPort};
-use core::fmt::{self, Write};
+use core::fmt::Write;
 use spin::Mutex;
 
 pub struct UartLogger {
     port: Mutex<Uart>,
 }
-/*
-impl fmt::Write for UartLogger {
-    fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
-        let mut port = self.lock_port_with_timeout();
-        port.write_str(s)
-    }
-}*/
 
 impl UartLogger {
     pub const fn new(port: UartComPort) -> Self {
