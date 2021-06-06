@@ -68,7 +68,7 @@ pub fn init_interrupt_handlers(cs: u16) {
     for i in 0..20 {
         idt.set_entry(
             i,
-            isr::ISR[i as usize] as u64,
+            isr::ISR[i as usize] as usize as u64,
             cs,
             IDT_ENTRY_FLAGS_RING_0 | IDT_ENTRY_FLAGS_PRESENT | IDT_ENTRY_FLAGS_INTERRUPT_GATE,
         );

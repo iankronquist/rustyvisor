@@ -8,7 +8,6 @@ use crate::vmx::{
 use crate::VCpu;
 use core::convert::TryFrom;
 use log::{trace, warn};
-use x86;
 use x86::dtables;
 
 extern "C" {
@@ -42,7 +41,7 @@ pub fn initialize_host_state(vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
     vmwrite(VmcsField::HostGsBase, 0)?;
 
     vmwrite(VmcsField::HostRsp, vcpu.stack_top as u64)?;
-    vmwrite(VmcsField::HostRip, _host_entrypoint as u64)?;
+    vmwrite(VmcsField::HostRip, _host_entrypoint as usize as u64)?;
 
     Ok(())
 }

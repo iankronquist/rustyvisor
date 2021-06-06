@@ -1,9 +1,10 @@
 #![cfg(not(test))]
-use ::log::error;
-
+    
 use core::sync::atomic;
 
 use core::panic::PanicInfo;
+
+use crate::UNSYNCHRONIZED_LOGGER;
 
 // Prevent recursive panicking.
 static HAVE_PANICKED: atomic::AtomicBool = atomic::AtomicBool::new(false);
@@ -20,11 +21,7 @@ pub extern "C" fn panic_fmt(info: &PanicInfo) -> ! {
         )
         .is_ok()
     {
-        unsafe {
-            crate::LOGGER.bust_locks();
-        }
-
-        error!("PANIC: {}", info);
+        write!(UNSYNCHRONIZED_LOGGER, "PANIC: {}", info);
     }
 
     loop {

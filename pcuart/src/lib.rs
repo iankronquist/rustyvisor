@@ -4,6 +4,7 @@
 use core::fmt;
 pub mod logger;
 
+#[derive(Copy, Clone)]
 #[repr(u16)]
 pub enum UartComPort {
     Com1 = 0x3f8,
@@ -23,7 +24,7 @@ const UART_OFFSET_LINE_CONTROL: u16 = 3;
 const UART_OFFSET_MODEM_CONTROL: u16 = 4;
 const UART_OFFSET_LINE_STATUS: u16 = 5;
 //const UART_OFFSET_MODEM_STATUS: u16 = 6;
-//`const UART_OFFSET_SCRATCH: u16 = 7;
+//const UART_OFFSET_SCRATCH: u16 = 7;
 
 #[derive(Default)]
 pub struct Uart {

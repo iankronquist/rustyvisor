@@ -23,6 +23,7 @@ pub mod vmx;
 use pcuart::logger;
 
 pub static LOGGER: logger::UartLogger = logger::UartLogger::new(pcuart::UartComPort::Com1);
+pub static UNSYNCHRONIZED_LOGGER: logger::UnsynchronizedUartLogger = logger::UnsynchronizedUartLogger::new(pcuart::UartComPort::Com1);
 
 #[derive(Debug)]
 #[repr(C)]
@@ -66,7 +67,7 @@ pub extern "C" fn rustyvisor_load() -> i32 {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rustyvisor_core_load(data: &VCpu) -> i32 {
+pub extern "C" fn rustyvisor_core_load(data: &VCpu) -> i32 {
     trace!(
         "VCPU in rustyvisor_core_load {:x?} {:x?}\r\n",
         data,
@@ -108,11 +109,6 @@ pub extern "C" fn rustyvisor_core_unload() {
 #[no_mangle]
 pub extern "C" fn rustyvisor_unload() {
     info!("Hypervisor unloaded.");
-
-    #[cfg(not(test))]
-    {
-        let _ = logger::fini();
-    }
 }
 
 #[cfg(feature = "runtime_tests")]

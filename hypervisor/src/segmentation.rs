@@ -76,13 +76,10 @@ pub struct GdtEntry64 {
 
 pub fn get_current_gdt() -> &'static [GdtEntry] {
     let mut gdtr: x86::dtables::DescriptorTablePointer<u64> = Default::default();
-    gdtr.base = 0xabad1dea as *mut u64;
-    gdtr.limit = 0xdead;
     unsafe {
         x86::dtables::sgdt(&mut gdtr);
     }
     trace!("Gdtr is {:x?}", gdtr);
-    assert_ne!({ gdtr.limit }, 0xdead);
     let bytes = usize::from(gdtr.limit) + 1;
     unsafe {
         core::slice::from_raw_parts(

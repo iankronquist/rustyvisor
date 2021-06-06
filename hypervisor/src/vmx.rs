@@ -314,28 +314,35 @@ fn prepare_vmx_memory_region(vmx_region: *mut u32, vmx_region_size: usize) {
     }
 }
 
+pub enum VmxEnablementError {
+    VmxExtensionsAbsent,
+    InvalidVmxOnRegion,
+    LockBitSetButVmxDisabled,
+    VmxOnFailure,
+}
+
 pub fn enable(
     vmxon_region: *mut u32,
     vmxon_region_phys: u64,
     vmxon_region_size: usize,
-) -> Result<(), ()> {
+) -> Result<(), VmxEnablementError> {
     assert!(is_page_aligned(vmxon_region as u64));
     assert!(is_page_aligned(vmxon_region_phys));
 
     if vmxon_region.is_null() {
         error!("Bad VMX on region");
-        return Err(());
+        return Err(VmxEnablementError::VmxExtensionsAbsent);
     }
 
     if !vmx_available() {
         error!("VMX unavailable");
-        return Err(());
+        return Err(VmxEnablementError::InvalidVmxOnRegion);
     }
 
     trace!("Setting lock bit");
-    set_lock_bit().or_else(|_| {
+    set_lock_bit().map_err(|_| {
         error!("Lock bit not set");
-        Err(())
+        VmxEnablementError::LockBitSetButVmxDisabled
     })?;
 
     trace!("Setting cr0 bits");
@@ -354,7 +361,7 @@ pub fn enable(
         }
         Err(e) => {
             error!("vmxon failed {:x?}", e);
-            Err(())
+            Err(VmxEnablementError::VmxOnFailure)
         }
     }
 }

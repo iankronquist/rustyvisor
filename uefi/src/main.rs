@@ -4,9 +4,6 @@
 
 extern crate hypervisor;
 extern crate uefi;
-//extern crate uefi_services;
-
-extern crate pcuart;
 
 use core::ffi::c_void;
 
@@ -29,9 +26,7 @@ extern "C" {
 
 const PAGE_SIZE: usize = 0x1000;
 
-use core::fmt::Write;
 fn efi_create_vcpu(system_table: &SystemTable<Boot>) -> uefi::Result<*mut hypervisor::VCpu> {
-    let mut uart = pcuart::Uart::new(pcuart::UartComPort::Com1);
     let vcpu = system_table
         .boot_services()
         .allocate_pool(
@@ -39,7 +34,6 @@ fn efi_create_vcpu(system_table: &SystemTable<Boot>) -> uefi::Result<*mut hyperv
             core::mem::size_of::<hypervisor::VCpu>(),
         )?
         .expect("Allocation completed") as *mut hypervisor::VCpu;
-    let _ = write!(uart, "VCPU allocation {:x?}\r\n", vcpu);
 
     let tss = system_table
         .boot_services()
@@ -161,45 +155,24 @@ fn efi_create_vcpu(system_table: &SystemTable<Boot>) -> uefi::Result<*mut hyperv
         (*tss_gdt_entry).base_highest = (tss_base >> 32) as u32;
         (*tss_gdt_entry).reserved0 = 0;
 
-        let _ = write!(uart, "VCPU info {:x?} {:x?}\r\n", *vcpu, vcpu);
     };
 
     Ok(uefi::Completion::new(Status::SUCCESS, vcpu))
 }
 
 extern "efiapi" fn efi_core_load(arg: *mut c_void) {
-    let mut uart = pcuart::Uart::new(pcuart::UartComPort::Com1);
     let system_table = unsafe { &*(arg as *const SystemTable<Boot>) };
     let vcpu_result = efi_create_vcpu(system_table);
-    let _ = write!(uart, "VCPU result {:x?}\r\n", vcpu_result);
     let vcpu_ptr = vcpu_result.unwrap().unwrap();
-    unsafe {
-        let _ = write!(
-            uart,
-            "VCPU as ptr {:x?} {:x?}\r\n",
-            { &*vcpu_ptr },
-            vcpu_ptr
-        );
-    }
-
     let vcpu = unsafe { &*vcpu_ptr };
-    let _ = write!(uart, "VCPU as ref {:x?} {:x?}\r\n", *vcpu, vcpu);
-    unsafe {
-        hypervisor::rustyvisor_core_load(vcpu);
-    }
+    hypervisor::rustyvisor_core_load(vcpu);
 }
 
 #[entry]
 fn efi_main(_image_handle: uefi::Handle, system_table: SystemTable<Boot>) -> Status {
     hypervisor::rustyvisor_load();
 
-    let mut uart = pcuart::Uart::new(pcuart::UartComPort::Com1);
-    let _ = write!(uart, "Image handle {:x?}\r\n", unsafe {
-        &__ImageBase as *const u8
-    });
-
     efi_core_load(&system_table as *const SystemTable<Boot> as *mut c_void);
-    let _ = write!(uart, "efi_core_loaded\r\n");
 
     let mp_proto = system_table
         .boot_services()
@@ -208,7 +181,6 @@ fn efi_main(_image_handle: uefi::Handle, system_table: SystemTable<Boot>) -> Sta
         .expect("Completion failure");
     let mp_proto = unsafe { &mut *mp_proto.get() };
 
-    let _ = write!(uart, "startup all aps\r\n");
 
     match mp_proto.startup_all_aps(
         false,
@@ -217,16 +189,13 @@ fn efi_main(_image_handle: uefi::Handle, system_table: SystemTable<Boot>) -> Sta
         None,
     ) {
         Ok(_) => {
-            let _ = write!(uart, "all aps started\r\n");
             Status::SUCCESS
         }
         Err(e) => match e.status() {
             Status::NOT_STARTED => {
-                let _ = write!(uart, "no sibling aps (this is okay)\r\n");
                 Status::SUCCESS
             }
             e => {
-                let _ = write!(uart, "Error starting {:x?}\r\n", e);
                 e
             }
         },
