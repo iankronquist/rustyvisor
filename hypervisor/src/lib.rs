@@ -37,9 +37,9 @@ pub struct VCpu {
     pub vmxon_region_size: usize,
     pub vmcs_size: usize,
     pub loaded_successfully: bool,
-    pub stack_base: *mut u32,
+    pub stack_base: *mut u8,
     pub stack_size: usize,
-    pub stack_top: *mut u32,
+    pub stack_top: *mut u8,
     pub host_gdt_base: *mut u64,
     pub host_gdt_limit: u64,
     pub virtual_local_interrupt_controller:
