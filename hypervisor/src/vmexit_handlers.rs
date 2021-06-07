@@ -1,3 +1,4 @@
+//! This module defines the host's VM exit handlers.
 //use crate::interrupt_controller;
 use crate::register_state::GeneralPurposeRegisterState;
 use crate::vmcs_dump;
@@ -7,6 +8,11 @@ use crate::vmx::vmread;
 use crate::vmx::vmwrite;
 use log::trace;
 
+/// Advance the guest's instruction pointer by the length of the instruction
+/// being executed by the guest when the VM exit occurred. When the guest
+/// resumes, it will start executing the next instruction.
+/// This function should not be called more than once per VM exit, or the guest
+/// may begin executing illegal or unintended instructions.
 fn advance_guest_rip() -> Result<(), x86::vmx::VmFail> {
     let mut rip = vmread(VmcsField::GuestRip)?;
     let len = vmread(VmcsField::VmExitInstructionLen)?;
@@ -14,6 +20,12 @@ fn advance_guest_rip() -> Result<(), x86::vmx::VmFail> {
     vmwrite(VmcsField::GuestRip, rip)
 }
 
+/// Emulate control register access. When a control register access VM exit
+/// occurs, perform that access, e.g. load from the control register or a store
+/// to it, on the underlying hardware (since this is a mostly passthrough
+/// hypervisor).
+/// At present we do not implement the CLTS or LMSW instructions since they are
+/// unused by major operating systems.
 fn handle_control_register_access(
     gprs: &mut GeneralPurposeRegisterState,
 ) -> Result<(), x86::vmx::VmFail> {
@@ -64,6 +76,11 @@ fn handle_control_register_access(
     Ok(())
 }
 
+/// Handle a VM Exit. This function will be called by the assembly code in
+/// the function _host_entrypoint when a VM exit occurs.
+/// This function must handle the exit reason or panic.
+/// The guest will be resumed using the current vmcs and the guest general
+/// purpose register state when this function returns.
 #[no_mangle]
 pub extern "C" fn hypervisor_handle_vmexit(gprs: *mut GeneralPurposeRegisterState) {
     let gprs = unsafe { &mut *gprs };
@@ -88,7 +105,7 @@ pub extern "C" fn hypervisor_handle_vmexit(gprs: *mut GeneralPurposeRegisterStat
             trace!("vmx interrupt window available");
             interrupt_controller::received_interrupt_window_exit().unwrap();
         }
-         */
+        */
         reason => {
             trace!("{:x?}", gprs);
             vmcs_dump::dump();
@@ -100,6 +117,10 @@ pub extern "C" fn hypervisor_handle_vmexit(gprs: *mut GeneralPurposeRegisterStat
     }
 }
 
+/// Called by [_host_entrypoint](../vmcs/fn._host_entrypoint.html) when a VM
+/// resume failure occurs. If the host cannot resume the guest, it must have
+/// misconfigured the guest's state, which is a bug in the hypervisor.
+/// This function panics.
 #[no_mangle]
 pub extern "C" fn hypervisor_vmresume_failure() {
     unimplemented!();

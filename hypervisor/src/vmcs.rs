@@ -1,3 +1,5 @@
+//! This module defines functions used for setting up the guest's virtual
+//! machine control structures.
 use crate::msr::{rdmsr, rdmsrl, Msr};
 use crate::segmentation::{get_current_gdt, unpack_gdt_entry};
 use crate::vmcs_fields::*;
@@ -8,9 +10,17 @@ use log::{trace, warn};
 use x86::dtables;
 
 extern "C" {
+    /// The host entrypoint function.
+    /// Implemented externally in assembly.
+    /// Will be called when a VM exit occurs.
+    /// When a function returns to the host entrypoint, the hypervisor will
+    /// attempt to resume the guest, or, if resuming the guest fails, it will
+    /// call
+    /// [hypervisor_vmresume_failure](../vmexit_handlers/fn.hypervisor_vmresume_failure.html)
     fn _host_entrypoint();
 }
 
+/// Initialize the host state for the currently loaded vmcs.
 pub fn initialize_host_state(vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
     let cr0 = unsafe { x86::controlregs::cr0() }.bits() as u64;
     let cr3 = unsafe { x86::controlregs::cr3() };
@@ -46,6 +56,7 @@ pub fn initialize_host_state(vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
     Ok(())
 }
 
+/// Initialize the guest state for the currently loaded vmcs.
 pub fn initialize_guest_state(_vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
     trace!("initialize_guest_state");
     vmwrite(VmcsField::VmcsLinkPointer, !0)?;
@@ -188,6 +199,7 @@ pub fn adjust_value_based_on_msr(msr: Msr, controls: u64) -> u64 {
     u64::from(fixed1 | (controls & fixed0))
 }
 
+/// Initialize the control values for the currently loaded vmcs.
 pub fn initialize_vm_control_values(vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
     // Configure entry/exit and supported feature controls
     vmwrite(
@@ -246,8 +258,10 @@ pub fn initialize_vm_control_values(vcpu: &VCpu) -> Result<(), x86::vmx::VmFail>
     Ok(())
 }
 
-pub fn vm_instruction_error_number_message(n: u64) -> &'static str {
-    match n {
+/// Given a vm instruction error number, return a human readable string
+/// representing the error, taken from the Intel manual.
+pub fn vm_instruction_error_number_message(vm_instruction_error_number: u64) -> &'static str {
+    match vm_instruction_error_number {
         0 => "No error",
         1 => "VMALL executed in VMX root operation",
         2 => "VMCLEAR with invalid physical address",

@@ -1,41 +1,80 @@
+//! This module defines various interrupt service routines, or ISRs.
+//! An interrupt service routine is called via the hardware when an interrupt
+//! occurs.
+//! These ISRs must be installed into the Interrupt Descriptor Table.
+//! This module mostly names functions defined elsewhere in assembly.
+
 /// The type of an Interrupt Service Routine assembly stub.
 /// They are modeled as a no-return extern "C" function.
-/// They are not meant to be called directly by rust code.
+/// However, they have an unusual calling convention determined by the
+/// hardware, and are not meant to be called directly by rust code.
 /// Instead, generate the appropriate interrupt.
 pub type InterruptServiceRoutine = unsafe extern "C" fn() -> !;
 
 extern "C" {
-    pub fn _isr0() -> !;
+    /// ISR 0, division by 0.
+    fn _isr0() -> !;
+    /// ISR 1, debug exception.
     fn _isr1() -> !;
+    /// ISR 2, Non-maskabile interrupt.
     fn _isr2() -> !;
+    /// ISR 3, breakpoint.
     fn _isr3() -> !;
+    /// ISR 4, overflow.
     fn _isr4() -> !;
+    /// ISR 5, bound range exceeded.
     fn _isr5() -> !;
+    /// ISR 6, invalid opcode.
     fn _isr6() -> !;
+    /// ISR 7, device unavailable.
     fn _isr7() -> !;
+    /// ISR 8, double fault.
     fn _isr8() -> !;
+    /// ISR 9, coprocessor segment overrun (deprecated).
     fn _isr9() -> !;
+    /// ISR 10, invalid TSS.
     fn _isr10() -> !;
+    /// ISR 11, segment not present.
     fn _isr11() -> !;
+    /// ISR 12, stack segment fault.
     fn _isr12() -> !;
+    /// ISR 13, general protection fault.
     fn _isr13() -> !;
+    /// ISR 14, page fault.
     fn _isr14() -> !;
+    /// ISR 15, reserved.
     fn _isr15() -> !;
+    /// ISR 16, x87 floating point exception.
     fn _isr16() -> !;
+    /// ISR 17, alignment check.
     fn _isr17() -> !;
+    /// ISR 18, machine check.
     fn _isr18() -> !;
+    /// ISR 19, simd floating point exception.
     fn _isr19() -> !;
+    /// ISR 20, virtualization exception.
     fn _isr20() -> !;
+    /// ISR 21, reserved.
     fn _isr21() -> !;
+    /// ISR 22, reserved.
     fn _isr22() -> !;
+    /// ISR 23, reserved.
     fn _isr23() -> !;
+    /// ISR 24, reserved.
     fn _isr24() -> !;
+    /// ISR 25, reserved.
     fn _isr25() -> !;
+    /// ISR 26, reserved.
     fn _isr26() -> !;
+    /// ISR 27, reserved.
     fn _isr27() -> !;
+    /// ISR 28, reserved.
     fn _isr28() -> !;
+    /// ISR 29, reserved.
     fn _isr29() -> !;
+    /// ISR 30, security exception.
     fn _isr30() -> !;
+    /// ISR 31, reserved.
     fn _isr31() -> !;
     fn _isr32() -> !;
     fn _isr33() -> !;

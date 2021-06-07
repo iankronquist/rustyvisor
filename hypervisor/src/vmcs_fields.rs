@@ -1,3 +1,4 @@
+//! Defines the fields of the vmcs and their contents.
 #![allow(non_upper_case_globals)]
 #![allow(unused)]
 

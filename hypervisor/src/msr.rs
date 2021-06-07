@@ -1,3 +1,10 @@
+//! This module is used to work with Model Specific Registers.
+//! A Model Specific Register, or MSR, is a hardware register used to configure
+//! the hardware, learn about the current hardware configuration, or monitor the
+//! state of the hardware.
+//! MSRs may be unique per core, unique per NUMA node, or global for the whole
+//! machine.
+
 /// The values of various Model Specific Registers.
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone)]

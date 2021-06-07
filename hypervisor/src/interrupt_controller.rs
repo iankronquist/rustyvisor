@@ -1,3 +1,4 @@
+//! This module defines a virtual interrupt controller to be used by each core.
 use log::trace;
 
 use crate::msr;

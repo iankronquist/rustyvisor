@@ -1,3 +1,25 @@
+//! A UEFI Runtime Service which implements a mostly-passthrough
+//! [hypervisor](../hypervisor/index.html).
+//! Invoke via the UEFI shell like so:
+//! ```text
+//! UEFI Interactive Shell v2.2
+//! EDK II
+//! UEFI v2.70 (EDK II, 0x00010000)
+//! Mapping table
+//!       FS0: Alias(s):F0a:;BLK0:
+//!           PciRoot(0x0)/Pci(0x1,0x1)/Ata(0x0)
+//! Press ESC in 1 seconds to skip startup.nsh or any other key to continue.
+//! Shell> fs0:
+//! FS0:\> dir
+//! Directory of: FS0:\
+//! 06/03/2021  23:33             342,016  uefi.efi
+//! 06/03/2021  23:42              10,383  NvVars
+//!           2 File(s)     433,807 bytes
+//!           0 Dir(s)
+//! FS0:\> load .\uefi.efi
+//! FS0:\>
+//! ```
+
 #![no_std]
 #![no_main]
 #![feature(abi_efiapi)]
@@ -16,16 +38,22 @@ use hypervisor::segmentation::Tss;
 use uefi::proto::pi::mp::MpServices;
 use uefi::{prelude::*, table::boot::MemoryType};
 
+/// Convert a physical address to a virtual address. UEFI memory is paged and
+/// identity mapped.
 fn efi_phys_to_virt<T>(phys: u64) -> *mut T {
     phys as *mut T
 }
 
 extern "C" {
+    /// A symbol defined by the linker representing the base of the image in
+    /// memory. There should be a PE header here.
     static __ImageBase: u8;
 }
 
+/// Size of a page in bytes.
 const PAGE_SIZE: usize = 0x1000;
 
+/// Allocate and initialize a VCpu.
 fn efi_create_vcpu(system_table: &SystemTable<Boot>) -> uefi::Result<*mut hypervisor::VCpu> {
     let vcpu = system_table
         .boot_services()
@@ -159,6 +187,7 @@ fn efi_create_vcpu(system_table: &SystemTable<Boot>) -> uefi::Result<*mut hyperv
     Ok(uefi::Completion::new(Status::SUCCESS, vcpu))
 }
 
+/// Load the hypervisor on the current core.
 extern "efiapi" fn efi_core_load(arg: *mut c_void) {
     let system_table = unsafe { &*(arg as *const SystemTable<Boot>) };
     let vcpu_result = efi_create_vcpu(system_table);
@@ -167,8 +196,14 @@ extern "efiapi" fn efi_core_load(arg: *mut c_void) {
     hypervisor::rustyvisor_core_load(vcpu);
 }
 
-#[entry]
-fn efi_main(_image_handle: uefi::Handle, system_table: SystemTable<Boot>) -> Status {
+/// The entrypoint of the UEFI runtime service.
+/// Sets up the hypervisor and loads it on every core using the UEFI
+/// multi-processing protocol.
+#[no_mangle]
+pub extern "efiapi" fn efi_main(
+    _image_handle: uefi::Handle,
+    system_table: SystemTable<Boot>,
+) -> Status {
     hypervisor::rustyvisor_load();
 
     efi_core_load(&system_table as *const SystemTable<Boot> as *mut c_void);

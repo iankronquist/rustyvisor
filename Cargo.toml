@@ -5,4 +5,5 @@ members = [
     "uefi",
     "pcuart",
     "linux",
+    "dmesg_logger",
 ]

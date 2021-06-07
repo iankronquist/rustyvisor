@@ -11,7 +11,7 @@ uefi environment. After running the driver UEFI will be running inside a VM as
 a guest and the host operating system will be RustyVisor!
 
 There is also some work in progress code in the linux/ directory which builds
-the hypervisor as a Linux Kernel module.
+the hypervisor as a Linux kernel module.
 
 This code is relatively exploratory, and a work in progress, so please excuse
 the state of the code and this rough excuse for documentation.
@@ -19,7 +19,7 @@ the state of the code and this rough excuse for documentation.
 
 ## Building the Hypervisor as a UEFI Runtime Service
 
-To build the hypervisor asa uefi application, you will need a nightly rust and
+To build the hypervisor as a uefi application, you will need a nightly rust and
 a version of clang which supports cross compiling with the
 `x86_64-unknown-windows` target and the tool llvm-lib, included with LLVM. The
 clang included with most Linux distributions should work. OS X users may have
@@ -49,7 +49,7 @@ First, build the project, and copy the hypervisor from
 
 Unmount the USB stick from your development device and insert it into your test
 device, assuming you have a separate test and development devices.
-If you're running under the Windows subsystem for linux, check out the
+If you're running under the Windows subsystem for Linux, check out the
 powershell script under `scripts/deploy_wsl.ps1` which automates some of the
 mounting and copying.
 
@@ -148,7 +148,7 @@ From here you can follow the instructions under the section called Launching fro
 
 Note that this is a work in progress, and likely to crash your machine.
 
-First, install the linux kernel headers for your kernel:
+First, install the Linux kernel headers for your kernel:
 ```
 sudo apt install linux-headers-$(uname -r)
 ```

@@ -1,8 +1,10 @@
+//! Dump the state of the current vmcs.
 use crate::vmcs;
 use crate::vmcs_fields::VmcsField;
 use crate::vmx::vmread;
 use log::debug;
 
+/// Log the state of the current vmcs at debug level.
 pub fn dump() {
     let val = vmread(VmcsField::VirtualProcessorID).unwrap_or(0xbadc0de);
     debug!("VirtualProcessorID: {:x}", val);
