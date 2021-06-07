@@ -38,7 +38,7 @@ _service_interrupt:
 	mov fs, ax
 	mov gs, ax
 
-	mov rdi, rsp
+	mov rcx, rsp
 
 	/* Call interrupt dispatcher. */
 .dispatch:
