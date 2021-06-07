@@ -1,7 +1,7 @@
 use crate::msr::{rdmsr, rdmsrl, Msr};
 use crate::segmentation::{get_current_gdt, unpack_gdt_entry};
 use crate::vmcs_fields::*;
-use crate::vmx::{ read_dr7, vmread, vmwrite, };
+use crate::vmx::{read_dr7, vmread, vmwrite};
 use crate::VCpu;
 use core::convert::TryFrom;
 use log::{trace, warn};
@@ -12,7 +12,6 @@ extern "C" {
 }
 
 pub fn initialize_host_state(vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
-
     let cr0 = unsafe { x86::controlregs::cr0() }.bits() as u64;
     let cr3 = unsafe { x86::controlregs::cr3() };
     let cr4 = unsafe { x86::controlregs::cr4() }.bits() as u64;
