@@ -1,4 +1,4 @@
-KDIR := /home/ian/linux
+KDIR := /lib/modules/$(shell uname -r)/build
 
 obj-m := rustyvisor.o
 rustyvisor-y := src/linux_module.o  src/isr.o src/host_entrypoint.o liblinux.o
@@ -19,8 +19,8 @@ $(RUST_LIB_PATH): $(RUST_FILES) Cargo.toml
 	$(CARGO) build --target=$(RUST_TARGET)
 
 liblinux.o: $(RUST_LIB_PATH)
-	cp $< $@
-	echo "cmd_$(realpath $@) := cp $< $@" > .liblinux.o.cmd
+	@cp $< $@
+	@echo "cmd_$(realpath $@) := cp $< $@" > .liblinux.o.cmd
 
 clean:
 	$(MAKE) -C $(KDIR) M=$(PWD) clean
