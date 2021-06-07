@@ -1,10 +1,7 @@
 use crate::msr::{rdmsr, rdmsrl, Msr};
 use crate::segmentation::{get_current_gdt, unpack_gdt_entry};
 use crate::vmcs_fields::*;
-use crate::vmx::{
-    read_cr0, read_cr3, read_cr4, read_cs, read_dr7, read_ds, read_es, read_fs, read_gs, read_ss,
-    vmread, vmwrite,
-};
+use crate::vmx::{ read_dr7, vmread, vmwrite, };
 use crate::VCpu;
 use core::convert::TryFrom;
 use log::{trace, warn};
@@ -15,22 +12,26 @@ extern "C" {
 }
 
 pub fn initialize_host_state(vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
-    vmwrite(VmcsField::HostCr0, read_cr0())?;
-    vmwrite(VmcsField::HostCr3, read_cr3())?;
-    vmwrite(VmcsField::HostCr4, read_cr4())?;
 
-    let cs = read_cs();
-    vmwrite(VmcsField::HostCsSelector, u64::from(cs))?;
-    let ds = read_ds();
-    vmwrite(VmcsField::HostDsSelector, u64::from(ds))?;
-    let es = read_es();
-    vmwrite(VmcsField::HostEsSelector, u64::from(es))?;
-    let fs = read_fs();
-    vmwrite(VmcsField::HostFsSelector, u64::from(fs))?;
-    let gs = read_gs();
-    vmwrite(VmcsField::HostGsSelector, u64::from(gs))?;
-    let ss = read_ss();
-    vmwrite(VmcsField::HostSsSelector, u64::from(ss))?;
+    let cr0 = unsafe { x86::controlregs::cr0() }.bits() as u64;
+    let cr3 = unsafe { x86::controlregs::cr3() };
+    let cr4 = unsafe { x86::controlregs::cr4() }.bits() as u64;
+    vmwrite(VmcsField::HostCr0, cr0)?;
+    vmwrite(VmcsField::HostCr3, cr3)?;
+    vmwrite(VmcsField::HostCr4, cr4)?;
+
+    let cs = x86::segmentation::cs();
+    vmwrite(VmcsField::HostCsSelector, u64::from(cs.bits()))?;
+    let ds = x86::segmentation::ds();
+    vmwrite(VmcsField::HostDsSelector, u64::from(ds.bits()))?;
+    let es = x86::segmentation::es();
+    vmwrite(VmcsField::HostEsSelector, u64::from(es.bits()))?;
+    let fs = x86::segmentation::fs();
+    vmwrite(VmcsField::HostFsSelector, u64::from(fs.bits()))?;
+    let gs = x86::segmentation::gs();
+    vmwrite(VmcsField::HostGsSelector, u64::from(gs.bits()))?;
+    let ss = x86::segmentation::ss();
+    vmwrite(VmcsField::HostSsSelector, u64::from(ss.bits()))?;
     assert_eq!(vcpu.tr_selector & !0x7, vcpu.tr_selector); // TR RPL must be 0. See host entry error reasons chapter.
     vmwrite(VmcsField::HostTrSelector, u64::from(vcpu.tr_selector))?;
     vmwrite(VmcsField::HostTrBase, vcpu.tr_base)?;

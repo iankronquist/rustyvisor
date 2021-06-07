@@ -59,7 +59,7 @@ pub extern "C" fn rustyvisor_load() -> i32 {
 
     info!("{}", "rustyvisor_load");
 
-    interrupts::init_interrupt_handlers(vmx::read_cs());
+    interrupts::init_interrupt_handlers(x86::segmentation::cs().bits());
 
     #[cfg(feature = "runtime_tests")]
     runtime_tests();

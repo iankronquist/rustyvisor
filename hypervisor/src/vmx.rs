@@ -25,221 +25,25 @@ pub const fn is_page_aligned(n: u64) -> bool {
     n.trailing_zeros() >= 12
 }
 
+/// Read a field from the currently loaded virtual machine control structure.
+///
+/// # Safety
+/// This must be called from within VMX root operation (i.e. after vmxon happens),
+/// and after a vmcs has been loaded with vmptrld.
 pub fn vmread(field: VmcsField) -> Result<u64, x86::vmx::VmFail> {
     unsafe { x86::bits64::vmx::vmread(field as u32) }
 }
 
+/// Write a field to the currently loaded virtual machine control structure.
+///
+/// # Safety
+/// This must be called from within VMX root operation (i.e. after vmxon happens),
+/// and after a vmcs has been loaded with vmptrld.
 pub fn vmwrite(field: VmcsField, val: u64) -> Result<(), x86::vmx::VmFail> {
     unsafe { x86::bits64::vmx::vmwrite(field as u32, val) }
 }
 
-/*
-
-pub fn vmwrite(field: VmcsField, val: u64) -> Result<(), u32> {
-    let ret: u32;
-    unsafe {
-        asm!(
-        "xor eax, eax; \
-         vmwrite {value}, {field}; \
-         setc ah; \
-         setz al;",
-         value = in(reg) (val),
-         field = in(reg) (field as u64),
-         out("eax")(ret),
-        );
-    }
-    if ret == 0 {
-        Ok(())
-    } else {
-        Err(ret)
-    }
-}
-
-pub fn vmptrld(vmcs_phys: u64) -> Result<(), u32> {
-    let ret: u32;
-    unsafe {
-        asm!(
-        "xor eax, eax; \
-        vmptrld [{vmcs_phys}]; \
-         setc ah; \
-         setz al;",
-         vmcs_phys = in(reg) vmcs_phys,
-        out("eax")(ret),
-        );
-    }
-    if ret == 0 {
-        Ok(())
-    } else {
-        Err(ret)
-    }
-}
-
-pub fn vmclear(vmcs_phys: u64) -> Result<(), u32> {
-    let ret: u32;
-    unsafe {
-        asm!(
-        "xor eax, eax; \
-        vmclear [{vmcs_phys}]; \
-         setc ah; \
-         setz al;",
-         vmcs_phys = in(reg) vmcs_phys,
-        out("eax")(ret),
-        );
-    }
-    if ret == 0 {
-        Ok(())
-    } else {
-        Err(ret)
-    }
-}
-
-pub fn vmptrst() -> Result<u64, u32> {
-    let ret: u32;
-    let vmcs_phys: u64 = 0;
-    unsafe {
-        asm!(
-        "xor eax, eax; \
-        vmptrst [{vmcs_phys}]; \
-         setc ah; \
-         setz al;",
-         vmcs_phys = in(reg) vmcs_phys,
-        out("eax")(ret),
-        );
-    }
-    if ret == 0 {
-        Ok(vmcs_phys)
-    } else {
-        Err(ret)
-    }
-}
-
-pub fn vmlaunch() -> Result<(), u32> {
-    let ret: u32;
-    unsafe {
-        asm!(
-            "xor eax, eax; \
-        vmlaunch; \
-         setc ah; \
-         setz al;",
-            out("eax")(ret),
-        );
-    }
-    if ret == 0 {
-        Ok(())
-    } else {
-        Err(ret)
-    }
-}
-
-pub fn vmresume() -> Result<(), u32> {
-    let ret: u32;
-    unsafe {
-        asm!(
-            "xor eax, eax; \
-            vmlaunch; \
-             setc ah; \
-             setz al;",
-            out("eax")(ret),
-        );
-    }
-    if ret == 0 {
-        Ok(())
-    } else {
-        Err(ret)
-    }
-}
-*/
-
-pub fn read_cs() -> u16 {
-    let ret: u16;
-    unsafe {
-        asm!("mov ax, cs", out("eax")(ret));
-    }
-    ret
-}
-
-pub fn read_ds() -> u16 {
-    let ret: u16;
-    unsafe {
-        asm!("mov ax, ds", out("eax")(ret));
-    }
-    ret
-}
-
-pub fn read_es() -> u16 {
-    let ret: u16;
-    unsafe {
-        asm!("mov ax, es", out("eax")(ret));
-    }
-    ret
-}
-
-pub fn read_fs() -> u16 {
-    let ret: u16;
-    unsafe {
-        asm!("mov ax, fs", out("eax")(ret));
-    }
-    ret
-}
-
-pub fn read_gs() -> u16 {
-    let ret: u16;
-    unsafe {
-        asm!("mov ax, gs", out("eax")(ret));
-    }
-    ret
-}
-
-pub fn read_ss() -> u16 {
-    let ret: u16;
-    unsafe {
-        asm!("mov ax, ss", out("eax")(ret));
-    }
-    ret
-}
-
-pub fn read_cr3() -> u64 {
-    let ret: u64;
-    unsafe {
-        asm!("mov {}, cr3", out(reg)(ret));
-    }
-    ret
-}
-
-pub fn read_cr4() -> u64 {
-    let ret: u64;
-    unsafe {
-        asm!("mov {}, cr4", out(reg)(ret));
-    }
-    ret
-}
-
-pub fn read_cr0() -> u64 {
-    let ret: u64;
-    unsafe {
-        asm!("mov {}, cr0", out(reg)(ret));
-    }
-    ret
-}
-
-pub fn write_cr0(val: u64) {
-    unsafe {
-        asm!(
-        "mov cr0, {}",
-        in(reg) (val)
-        );
-    }
-}
-
-pub fn write_cr4(val: u64) {
-    unsafe {
-        asm!(
-        "mov cr4, {}",
-        in(reg) (val)
-        );
-    }
-}
-
+/// Read the contents of the current machine's dr7 (debug register 7).
 pub fn read_dr7() -> u64 {
     let ret: u64;
     unsafe {
@@ -248,19 +52,14 @@ pub fn read_dr7() -> u64 {
     ret
 }
 
-pub fn read_flags() -> u64 {
-    let ret: u64;
-    unsafe {
-        asm!("pushf; pop {}", out(reg)(ret));
-    }
-    ret
-}
-
+/// Returns true if the Intel vmx extensions are available, false otherwise.
 fn vmx_available() -> bool {
     let result = unsafe { core::arch::x86_64::__cpuid(CPUIDLeaf::ProcessorInfoAndFeatures as u32) };
     result.ecx & (CPUIDLeafProcessorInfoAndFeaturesECXBits::VMXAvailable as u32) != 0
 }
 
+/// Gets the current VMCS revision identifier.
+/// This is used to initialize the vmxon region and the vmcs.
 fn get_vmcs_revision_identifier() -> u32 {
     let pair = rdmsr(Msr::Ia32VmxBasic);
     let vmcs_revision_identifier = pair.eax;
@@ -271,19 +70,23 @@ fn get_vmcs_revision_identifier() -> u32 {
 fn set_cr0_bits() {
     let fixed0 = rdmsrl(Msr::Ia32VmxCr0Fixed0);
     let fixed1 = rdmsrl(Msr::Ia32VmxCr0Fixed1);
-    let mut cr0 = read_cr0();
-    cr0 |= fixed0;
-    cr0 &= fixed1;
-    write_cr0(cr0);
+    let mut cr0 = unsafe { x86::controlregs::cr0() };
+    cr0 |= x86::controlregs::Cr0::from_bits_truncate(fixed0 as usize);
+    cr0 &= x86::controlregs::Cr0::from_bits_truncate(fixed1 as usize);
+    unsafe {
+        x86::controlregs::cr0_write(cr0);
+    }
 }
 
 fn set_cr4_bits() {
     let fixed0 = rdmsrl(Msr::Ia32VmxCr4Fixed0);
     let fixed1 = rdmsrl(Msr::Ia32VmxCr4Fixed1);
-    let mut cr4 = read_cr4();
-    cr4 |= fixed0;
-    cr4 &= fixed1;
-    write_cr4(cr4);
+    let mut cr4 = unsafe { x86::controlregs::cr4() };
+    cr4 |= x86::controlregs::Cr4::from_bits_truncate(fixed0 as usize);
+    cr4 &= x86::controlregs::Cr4::from_bits_truncate(fixed1 as usize);
+    unsafe {
+        x86::controlregs::cr4_write(cr4);
+    }
 }
 
 fn set_lock_bit() -> Result<(), ()> {
