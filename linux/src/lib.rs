@@ -38,7 +38,6 @@ fn rustyvisor_linux_allocate_vcpu() -> Result<&'static mut hypervisor::VCpu, ()>
         }
         let vmx_on_region_phys = rustyvisor_linux_virt_to_phys(vmxon_region as *mut u8);
 
-
         let vmcs = rustyvisor_linux_kmalloc(PAGE_SIZE) as *mut u32;
         if vmcs.is_null() {
             return Err(());
@@ -56,7 +55,6 @@ fn rustyvisor_linux_allocate_vcpu() -> Result<&'static mut hypervisor::VCpu, ()>
             return Err(());
         }
         let msr_bitmap_phys = rustyvisor_linux_virt_to_phys(msr_bitmap);
-
 
         let gdt = hypervisor::segmentation::get_current_gdt();
         let original_gdt_size = gdt.len() * core::mem::size_of::<GdtEntry>();
