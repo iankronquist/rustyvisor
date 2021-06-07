@@ -65,9 +65,11 @@ fn vmx_is_guest_interruptable() -> bool {
     guest_interruptability_info == 0
 }
 
+const VM_ENTRY_INTERRUPT_INFO_VALID: u64 = 1 << 31;
+const VM_ENTRY_INTERRUPT_INFO_TYPE_EXTERNAL_INTERRUPT: u64 = 0 << 8;
 fn vmx_inject_interrupt_into_guest(vector: u64) -> Result<(), x86::vmx::VmFail> {
     assert!(vector < INTERRUPT_COUNT as u64);
-    let interrupt_info = vector | (1 << 31) | (0 << 8); // valid, external interrupts
+    let interrupt_info = vector | VM_ENTRY_INTERRUPT_INFO_VALID | VM_ENTRY_INTERRUPT_INFO_TYPE_EXTERNAL_INTERRUPT;
     crate::debug::breakpoint();
     vmwrite(VmcsField::VmEntryIntrInfoField, interrupt_info)
 }
