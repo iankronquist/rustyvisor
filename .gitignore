@@ -45,6 +45,7 @@ Module.symvers
 modules.order
 *.ko
 *.mod.c
+*.mod
 
 # Lock files used by bochs and others
 *.lock
