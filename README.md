@@ -10,23 +10,23 @@ This project takes the form of a uefi runtime service which virtualizes the
 uefi environment. After running the driver UEFI will be running inside a VM as
 a guest and the host operating system will be RustyVisor!
 
-This project formerly attempted to do something similar via a Linux kernel
-module, but that approach has been set aside for now.
+There is also some work in progress code in the linux/ directory which builds
+the hypervisor as a Linux Kernel module.
 
 This code is relatively exploratory, and a work in progress, so please excuse
 the state of the code and this rough excuse for documentation.
 
 
-## Getting Started
+## Building the Hypervisor as a UEFI Runtime Service
 
-To build, you will need a nightly rust and a version of clang which supports
-cross compiling with the `x86_64-unknown-windows` target. The clang included
-with most Linux distributions should work. OS X users may have to install a
-version of clang from homebrew, as I don't believe that the version which ships
-with xcode doesn't support cross compiling PE binaries. Windows users are
-encouraged to use the Windows Subsystem for Linux, possibly with an Ubuntu
-distribution.
-
+To build the hypervisor asa uefi application, you will need a nightly rust and
+a version of clang which supports cross compiling with the
+`x86_64-unknown-windows` target and the tool llvm-lib, included with LLVM. The
+clang included with most Linux distributions should work. OS X users may have
+to install a version of clang from homebrew, as I don't believe that the
+version which ships with xcode doesn't support cross compiling PE binaries.
+Windows users are encouraged to use the Windows Subsystem for Linux, possibly
+with an Ubuntu distribution.
 
 First, install the necessary rust dependencies with rustup:
 ```
@@ -83,7 +83,7 @@ FS0:\> load .\uefi.efi
 FS0:\>
 ```
 
-## Running under the bochs emulator
+## Running the UEFI Runtime Service Hypervisor Under the Bochs Emulator
 
 To make development without real hardware easier, there is a bochs
 configuration file under `uefi/bochsrc.txt`. This bochsrc is setup to boot to a
@@ -143,6 +143,45 @@ After a few seconds, bochs should start up the UEFI shell and you should see a p
 Shell>
 ```
 From here you can follow the instructions under the section called Launching from a UEFI shell.
+
+## Building the Hypervisor as a Linux Kernel Module
+
+Note that this is a work in progress, and likely to crash your machine.
+
+First, install the linux kernel headers for your kernel:
+```
+sudo apt install linux-headers-$(uname -r)
+```
+
+Next, build the hypervisor using make. Do not invoke cargo directly, let make handle that.
+
+```
+$ cd linux/
+$ make
+make -C /home/ian/linux M=/home/ian/rustyvisor/linux modules
+make[1]: Entering directory '/home/ian/linux'
+  CC [M]  /home/ian/rustyvisor/linux/src/linux_module.o
+  AS [M]  /home/ian/rustyvisor/linux/src/isr.o
+/home/ian/rustyvisor/linux/src/isr.o: warning: objtool: .text+0x0: unreachable instruction
+  AS [M]  /home/ian/rustyvisor/linux/src/host_entrypoint.o
+/home/ian/rustyvisor/linux/src/host_entrypoint.o: warning: objtool: .text+0x0: unreachable instruction
+  LD [M]  /home/ian/rustyvisor/linux/rustyvisor.o
+  MODPOST /home/ian/rustyvisor/linux/Module.symvers
+  CC [M]  /home/ian/rustyvisor/linux/rustyvisor.mod.o
+  LD [M]  /home/ian/rustyvisor/linux/rustyvisor.ko
+make[1]: Leaving directory '/home/ian/linux'
+```
+This should produce a file named rustyvisor.ko.
+
+If your kernel has KVM installed, you may need to remove it with the script remove-kvm.sh:
+```
+$ sh ./scripts/remove-kvm.sh
+```
+
+Load the hypervisor with the insmod command:
+```
+$ sudo insmod rustyvisor.ko
+```
 
 ## Contributions & Bugs
 
