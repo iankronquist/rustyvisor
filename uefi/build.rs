@@ -5,10 +5,6 @@ use std::{env, error::Error};
 const ASM_FILES: [&str; 2] = ["host_entrypoint.S", "isr.S"];
 
 fn main() -> Result<(), Box<dyn Error>> {
-    use_direct()
-}
-
-fn use_direct() -> Result<(), Box<dyn Error>> {
     let src_dir = &format!("{}/src", env::var("CARGO_MANIFEST_DIR").unwrap());
     let out_dir = env::var("OUT_DIR").unwrap();
     let full_lib = &format!("{}/{}", out_dir, "asm.lib");

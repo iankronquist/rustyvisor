@@ -20,11 +20,22 @@ mod vmcs_fields;
 mod vmexit_handlers;
 mod vmexit_reasons;
 pub mod vmx;
+
+#[cfg(target_os = "uefi")]
 use pcuart::logger;
 
+#[cfg(target_os = "uefi")]
 pub static LOGGER: logger::UartLogger = logger::UartLogger::new(pcuart::UartComPort::Com1);
+#[cfg(target_os = "uefi")]
 pub static UNSYNCHRONIZED_LOGGER: logger::UnsynchronizedUartLogger =
     logger::UnsynchronizedUartLogger::new(pcuart::UartComPort::Com1);
+
+#[cfg(not(target_os = "uefi"))]
+use dmesg_logger as logger;
+#[cfg(not(target_os = "uefi"))]
+pub static LOGGER: logger::DMesgLogger = logger::DMesgLogger {};
+#[cfg(not(target_os = "uefi"))]
+pub static UNSYNCHRONIZED_LOGGER: logger::DMesgLogger = logger::DMesgLogger {};
 
 #[derive(Debug)]
 #[repr(C)]
