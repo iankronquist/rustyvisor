@@ -1,3 +1,4 @@
+//! Defines the codes representing the reason a VM exit occurred.
 #![allow(dead_code)]
 
 pub const VMEXIT_REASON_NMI_OR_EXCEPTION: u64 = 0;

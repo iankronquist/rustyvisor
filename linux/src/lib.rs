@@ -1,17 +1,26 @@
+//! A shim layer between the C code making up the Linux kernel module and the
+//! [hypervisor](../hypervisor/index.html) module.
+//! This code gets compiled into a static library which is linked into the
+//! kernel module
 #![no_std]
 extern crate hypervisor;
 use core::convert::TryFrom;
 
+/// The size of a small page in bytes.
 const PAGE_SIZE: usize = 0x1000;
+
 extern "C" {
+    /// A function implemented in C which converts a kernel virtual address to a physical address.
     fn rustyvisor_linux_virt_to_phys(x: *mut u8) -> u64;
+    /// A function implemented in C for allocating memory. The memory will be zeroed.
     fn rustyvisor_linux_kmalloc(size: usize) -> *mut u8;
 }
 use hypervisor::segmentation::{GdtEntry, GdtEntry64};
 
 use hypervisor::segmentation::Tss;
 
-fn rustyvisor_linux_allocate_vcpu() -> Result<&'static mut hypervisor::VCpu, ()> {
+/// Allocate and initialize a VCpu.
+fn rustyvisor_linux_create_vcpu() -> Result<&'static mut hypervisor::VCpu, ()> {
     unsafe {
         let vcpu = rustyvisor_linux_kmalloc(core::mem::size_of::<hypervisor::VCpu>())
             as *mut hypervisor::VCpu;
@@ -104,9 +113,10 @@ fn rustyvisor_linux_allocate_vcpu() -> Result<&'static mut hypervisor::VCpu, ()>
     }
 }
 
+/// Load the hypervisor on the current core.
 #[no_mangle]
 pub extern "C" fn rustyvisor_linux_core_load(_ptr: usize) -> i32 {
-    let vcpu = match rustyvisor_linux_allocate_vcpu() {
+    let vcpu = match rustyvisor_linux_create_vcpu() {
         Ok(vcpu) => vcpu,
         Err(_) => return -1,
     };

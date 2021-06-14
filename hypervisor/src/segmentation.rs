@@ -1,3 +1,5 @@
+//! Defines structures and code for working with x86 segments.
+
 use log::trace;
 use x86;
 const GDT_ENTRY_ACCESS_PRESENT: u8 = 1 << 7;

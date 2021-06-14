@@ -1,3 +1,6 @@
+//! This module defines various structurs used by the hypervisor to set up the
+//! host Interrupt Descriptor Table and handle interrupts and exceptions received
+//! by the host.
 use crate::isr;
 use spin::Mutex;
 

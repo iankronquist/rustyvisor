@@ -1,3 +1,6 @@
+//! Defines structures for working with the register state during a VM exit or
+//! interrupt.
+
 /// Stores the state of the general purpose registers.
 /// The order must be the same as the order of the pushes and pops in the assembly functions _host_entrypoint and _service_interrupt.
 /// This structure does not include rsp since rsp is saved by iret in an interrupt and in the vmcs field GuestRsp by a vmexit.

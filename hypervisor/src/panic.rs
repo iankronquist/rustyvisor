@@ -1,3 +1,4 @@
+//! This module handles hypervisor panics.
 #![cfg(not(test))]
 
 use core::sync::atomic;
@@ -6,9 +7,12 @@ use core::panic::PanicInfo;
 
 use crate::UNSYNCHRONIZED_LOGGER;
 
-// Prevent recursive panicking.
+/// Prevent recursive panicking.
 static HAVE_PANICKED: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
+/// Called by the rust runtime when a panic occurs.
+/// Sets HAVE_PANICKED, and if this is the first time a panic has occurred,
+/// logs information about the panic.
 #[no_mangle]
 #[panic_handler]
 pub extern "C" fn panic_fmt(info: &PanicInfo) -> ! {

@@ -1,3 +1,5 @@
+//! This module defines functions useful for debugging the hypervisor.
+
 /// A breakpoint function for debuggers to hook.
 ///
 /// This does NOT generate an int 3 breakpoint instruction.
