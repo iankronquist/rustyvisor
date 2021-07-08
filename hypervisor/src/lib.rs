@@ -27,6 +27,8 @@
 use ::log::{error, info, trace, LevelFilter};
 
 mod debug;
+pub mod hypercall;
+mod hypercall_handler;
 pub mod interrupt_controller;
 mod interrupts;
 mod isr;
