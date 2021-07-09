@@ -1,7 +1,8 @@
 use crate::hypercall;
 use crate::register_state::GeneralPurposeRegisterState;
 
-const HYPERVISOR_VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const HYPERVISOR_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 fn parse_version() -> [u32; 3] {
     let mut index = 0;
     let mut version: [u32; 3] = [0, 0, 0];
@@ -13,9 +14,10 @@ fn parse_version() -> [u32; 3] {
             index += 1;
             continue;
         }
-        if c.is_ascii_digit() {
+
+        if let Some(digit) = c.to_digit(10) {
             version[index] *= 10;
-            version[index] += u32::from((c as u8) - ('0' as u8));
+            version[index] += digit;
         }
     }
 
