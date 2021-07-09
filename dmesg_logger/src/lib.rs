@@ -1,4 +1,6 @@
 #![no_std]
+#![warn(missing_docs)]
+
 use log;
 
 use core::fmt;

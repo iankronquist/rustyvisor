@@ -1,5 +1,6 @@
 #![no_std]
 #![feature(asm)]
+#![warn(missing_docs)]
 
 use core::fmt;
 pub mod logger;

@@ -2,6 +2,7 @@
 #![feature(asm)]
 #![feature(lang_items)]
 #![allow(unknown_lints)]
+#![warn(missing_docs)]
 
 //! A library implementing a mostly-passthrough hypervisor.
 //! A mostly passthrough hypervisor mostly virtualizes the guest and does very
