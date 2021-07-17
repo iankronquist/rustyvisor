@@ -29,17 +29,13 @@ extern crate hypervisor;
 extern crate uefi;
 use uefi::prelude::*;
 
-use core::ffi::c_void;
-
-use core::convert::TryFrom;
-
 /// The entrypoint of the UEFI runtime service.
 /// Sets up the hypervisor and loads it on every core using the UEFI
 /// multi-processing protocol.
 #[no_mangle]
 pub extern "efiapi" fn efi_main(
     _image_handle: uefi::Handle,
-    system_table: SystemTable<Boot>,
+    _system_table: SystemTable<Boot>,
 ) -> Status {
     Status::SUCCESS
 }

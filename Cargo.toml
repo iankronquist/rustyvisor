@@ -6,4 +6,5 @@ members = [
     "pcuart",
     "linux",
     "dmesg_logger",
+    "rustyvctl",
 ]
