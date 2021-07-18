@@ -1,5 +1,9 @@
 //! Hypercall ABI
-//! Th
+//! The hypervisor will handle hypercalls via the CPUID instruction.
+//! Hypercalls must have a magic number HYPERCALL_MAGIC in RAX and a valid
+//! hypercall reason in RBX.
+//! Values will be returned in RAX, RBX, RCX, and RDX according to the
+//! hypercall reason.
 
 /// Magic number which must be in RAX if this is a hypercall.
 pub const HYPERCALL_MAGIC: u32 = 0x72737479;

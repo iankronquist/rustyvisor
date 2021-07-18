@@ -24,6 +24,9 @@ fn parse_version() -> [u32; 3] {
     version
 }
 
+/// Handle a hypercall.
+/// Expects gprs.rax to hold hypercall::HYPERCALL_MAGIC and gprs.rbx to hold a
+/// valid hypercall reason.
 pub fn handle_hypercall(gprs: &mut GeneralPurposeRegisterState) -> Result<(), x86::vmx::VmFail> {
     assert_eq!(hypercall::HYPERCALL_MAGIC, gprs.rax as u32);
 
@@ -45,14 +48,3 @@ pub fn handle_hypercall(gprs: &mut GeneralPurposeRegisterState) -> Result<(), x8
     }
     Ok(())
 }
-/*
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn test_parse_version() {
-        let version = parse_version();
-        assert_eq!(version, [0, 1, 0]);
-    }
-}
-*/
