@@ -3,21 +3,20 @@ use crate::register_state::GeneralPurposeRegisterState;
 
 const HYPERVISOR_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-fn parse_version() -> [u32; 3] {
+fn parse_version(version_string: &str) -> [u32; 3] {
     let mut index = 0;
     let mut version: [u32; 3] = [0, 0, 0];
-    for c in HYPERVISOR_VERSION.chars() {
+    for c in version_string.chars() {
         if index > version.len() {
             break;
-        }
-        if c == '.' {
-            index += 1;
-            continue;
         }
 
         if let Some(digit) = c.to_digit(10) {
             version[index] *= 10;
             version[index] += digit;
+        } else {
+            index += 1;
+            continue;
         }
     }
 
@@ -33,7 +32,7 @@ pub fn handle_hypercall(gprs: &mut GeneralPurposeRegisterState) -> Result<(), x8
     let reason = gprs.rbx as u32;
     match reason {
         hypercall::HYPERCALL_REASON_VERSION => {
-            let version = parse_version();
+            let version = parse_version(&HYPERVISOR_VERSION);
             gprs.rax = u64::from(version[0]);
             gprs.rbx = u64::from(version[1]);
             gprs.rcx = u64::from(version[2]);
