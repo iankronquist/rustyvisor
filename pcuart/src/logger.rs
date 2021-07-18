@@ -4,6 +4,8 @@ use super::{Uart, UartBaudRate, UartComPort};
 use core::fmt::Write;
 use spin::Mutex;
 
+/// A logger object suitable to writing logging information to a UART.
+/// Unlike the UART object, this handles synchronization.
 pub struct UartLogger {
     port: Mutex<Uart>,
 }
@@ -36,11 +38,13 @@ impl UnsynchronizedUartLogger {
 }
 
 impl UartLogger {
+    /// Creates a new UART logger which will use the given port.
     pub const fn new(port: UartComPort) -> Self {
         Self {
             port: Mutex::new(Uart::new(port)),
         }
     }
+    /// Configures the UART to use an 115200 baud rate.
     pub fn init(&self) {
         self.port.lock().init(false, UartBaudRate::Baud115200);
     }

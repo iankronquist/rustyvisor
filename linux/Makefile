@@ -1,4 +1,4 @@
-KDIR := /lib/modules/$(shell uname -r)/build
+KDIR ?= /lib/modules/$(shell uname -r)/build
 
 obj-m := rustyvisor.o
 rustyvisor-y := src/linux_module.o  src/isr.o src/host_entrypoint.o liblinux.o

@@ -11,6 +11,11 @@ use crate::{
 
 const VM_PREEMPTION_TIMER_VALUE: u64 = 0xffff;
 const INTERRUPT_COUNT: usize = 256;
+
+/// A Virtualized Interrupt Controller
+/// Caches various interrupt information.
+/// Should be initialized as all zeroes.
+/// Each core should have their own VirtualLocalInterruptController.
 pub struct VirtualLocalInterruptController {
     total_interrupts_count: usize,
     delayed_delivery_interrupts: [usize; INTERRUPT_COUNT],
@@ -118,6 +123,10 @@ fn vmx_deconfigure_interrupt_window_exiting() -> Result<(), x86::vmx::VmFail> {
     vmwrite(VmcsField::CpuBasedVmExecControl, cpu_based_controls)
 }
 
+/// Call this function when an external interrupt is received.
+/// If the guest is interruptable, inject the interrupt into the guest.
+/// Otherwise, cache it for later delivery and configure the guest to wake up
+/// later for interrupt delivery.
 pub fn received_external_interrupt() -> Result<(), x86::vmx::VmFail> {
     let interrupt_info = vmread(VmcsField::VmExitIntrInfo)?;
     let interrupt_number = interrupt_info & 0xff;
@@ -134,6 +143,17 @@ pub fn received_external_interrupt() -> Result<(), x86::vmx::VmFail> {
     }
 }
 
+/// Call when the guest preemption timer fires.
+/// If the guest does not support interrupt window exiting, and there is an
+/// outstanding interrupt cached, and the guest is interruptable,
+/// an interrupt will be injected into the guest.
+///
+/// If the interrupt controller requested the timer be enabled and the timer is
+/// not being used elsewhere in the hypervisor, and there are no outstanding
+/// interrupts, the timer will be disabled to allow the guest to run unimpeded.
+///
+/// This function only does work if the guest does not support interrupt window
+/// exiting.
 pub fn received_preemption_timer() -> Result<(), x86::vmx::VmFail> {
     let local_interrupt_controller = get_local_interrupt_controller();
     if local_interrupt_controller.requested_poll_of_interrupts_on_next_preemption_timer
@@ -157,6 +177,9 @@ pub fn received_preemption_timer() -> Result<(), x86::vmx::VmFail> {
     Ok(())
 }
 
+/// If interrupt window exiting is supported by the guest, then this function
+/// should be called when an interrupt window exit occurs. This function will
+/// then inject any outstanding interrupts into the guest.
 pub fn received_interrupt_window_exit() -> Result<(), x86::vmx::VmFail> {
     let local_interrupt_controller = get_local_interrupt_controller();
     assert!(vmx_is_guest_interruptable());

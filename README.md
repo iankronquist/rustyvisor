@@ -38,13 +38,13 @@ rustup target install x86_64-unknown-uefi
 Once you have the right version of rust installed, building is straightforward:
 
 ```
-cargo build --target x86_64-unknown-uefi
+sh build.sh
 ```
 
 ## Launching from a UEFI shell
 
 First, build the project, and copy the hypervisor from
-`target/x86_64-unknown-uefi/debug/uefi.efi` onto a USB stick. 
+`target/x86_64-unknown-uefi/debug/rustyvisor.efi` onto a USB stick. 
 
 
 Unmount the USB stick from your development device and insert it into your test
@@ -75,11 +75,11 @@ Press ESC in 1 seconds to skip startup.nsh or any other key to continue.
 Shell> fs0:
 FS0:\> dir
 Directory of: FS0:\
-06/03/2021  23:33             342,016  uefi.efi
+06/03/2021  23:33             342,016  rustyvisor.efi
 06/03/2021  23:42              10,383  NvVars
           2 File(s)     433,807 bytes
           0 Dir(s)
-FS0:\> load .\uefi.efi
+FS0:\> load .\rustyvisor.efi
 FS0:\>
 ```
 

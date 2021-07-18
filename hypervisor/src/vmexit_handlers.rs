@@ -1,9 +1,12 @@
 //! This module defines the host's VM exit handlers.
 //use crate::interrupt_controller;
+use crate::hypercall;
+use crate::hypercall_handler;
 use crate::register_state::GeneralPurposeRegisterState;
 use crate::vmcs_dump;
 use crate::vmcs_fields::VmcsField;
 use crate::vmexit_reasons::*;
+use crate::vmx;
 use crate::vmx::vmread;
 use crate::vmx::vmwrite;
 use log::trace;
@@ -18,6 +21,28 @@ fn advance_guest_rip() -> Result<(), x86::vmx::VmFail> {
     let len = vmread(VmcsField::VmExitInstructionLen)?;
     rip += len;
     vmwrite(VmcsField::GuestRip, rip)
+}
+
+/// Handle CPUID
+/// In most cases, report back the host's CPUID values with the following exceptions:
+/// - Clear the VMX available bit
+/// - If RAX has the magic value 'rsty' or 0x72737479 this is a hypercall, so
+///   call the hypercall handler.
+/// - Do not set the hypervisor bit, to be stealthy.
+fn handle_cpuid(gprs: &mut GeneralPurposeRegisterState) -> Result<(), x86::vmx::VmFail> {
+    if gprs.rax as u32 == hypercall::HYPERCALL_MAGIC {
+        return hypercall_handler::handle_hypercall(gprs);
+    }
+
+    let mut result = unsafe { core::arch::x86_64::__cpuid(gprs.rax as u32) };
+    if gprs.rax == vmx::CPUIDLeaf::ProcessorInfoAndFeatures as u64 {
+        result.ecx &= vmx::CPUIDLeafProcessorInfoAndFeaturesECXBits::VMXAvailable as u32;
+    }
+    gprs.rax = u64::from(result.eax);
+    gprs.rbx = u64::from(result.ebx);
+    gprs.rcx = u64::from(result.ecx);
+    gprs.rdx = u64::from(result.edx);
+    Ok(())
 }
 
 /// Emulate control register access. When a control register access VM exit
@@ -87,6 +112,7 @@ pub extern "C" fn hypervisor_handle_vmexit(gprs: *mut GeneralPurposeRegisterStat
     let vmexit_reasion = vmread(VmcsField::VmExitReason).expect("vm exit reason shouldn't error");
     let qualification = vmread(VmcsField::ExitQualificatIon).unwrap_or(0);
     match vmexit_reasion {
+        VMEXIT_REASON_CPUID => handle_cpuid(gprs).unwrap(),
         VMEXIT_REASON_CONTROL_REGISTER_ACCESS => {
             handle_control_register_access(gprs).unwrap();
         }

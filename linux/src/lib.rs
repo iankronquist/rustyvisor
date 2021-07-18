@@ -2,7 +2,10 @@
 //! [hypervisor](../hypervisor/index.html) module.
 //! This code gets compiled into a static library which is linked into the
 //! kernel module
+
 #![no_std]
+#![warn(missing_docs)]
+
 extern crate hypervisor;
 use core::convert::TryFrom;
 
