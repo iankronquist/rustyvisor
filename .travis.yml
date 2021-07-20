@@ -1,10 +1,8 @@
 language: rust
 os: linux
-sudo: required
 cache: cargo
 rust:
   - nightly
-# Testing 123
 install:
   - bash ./scripts/ci-install.sh
 script:
