@@ -24,6 +24,8 @@
 #![no_main]
 #![feature(abi_efiapi)]
 #![warn(missing_docs)]
+// Used for ud2 intrinsic.
+#![feature(stdsimd)]
 
 extern crate hypervisor_abi;
 extern crate uefi;
@@ -57,8 +59,7 @@ pub extern "efiapi" fn efi_main(
 }
 
 /// Handle Rust panics.
-/// Enters an infinite loop.
 #[panic_handler]
 pub extern "C" fn panic_fmt(_info: &core::panic::PanicInfo) -> ! {
-    loop {}
+    unsafe { core::arch::x86_64::ud2() }
 }
