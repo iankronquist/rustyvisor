@@ -1,6 +1,5 @@
 //! This module defines the host's VM exit handlers.
 //use crate::interrupt_controller;
-use crate::hypercall;
 use crate::hypercall_handler;
 use crate::register_state::GeneralPurposeRegisterState;
 use crate::vmcs_dump;
@@ -30,7 +29,7 @@ fn advance_guest_rip() -> Result<(), x86::vmx::VmFail> {
 ///   call the hypercall handler.
 /// - Do not set the hypervisor bit, to be stealthy.
 fn handle_cpuid(gprs: &mut GeneralPurposeRegisterState) -> Result<(), x86::vmx::VmFail> {
-    if gprs.rax as u32 == hypercall::HYPERCALL_MAGIC {
+    if gprs.rax as u32 == hypervisor_abi::HYPERCALL_MAGIC {
         return hypercall_handler::handle_hypercall(gprs);
     }
 

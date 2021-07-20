@@ -2,6 +2,7 @@
 
 members = [
     "hypervisor",
+    "hypervisor_abi",
     "uefi",
     "pcuart",
     "linux",

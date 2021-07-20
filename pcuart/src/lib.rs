@@ -5,7 +5,7 @@
 //! A logging crate for writing logs to a PC's COM port.
 //! For more information see the Wikipedia page for the
 //! [16550 UART //chip](https://en.wikipedia.org/wiki/16550_UART), and the OS
-//! Dev wiki page on Serial Ports](https://wiki.osdev.org/Serial_Ports).
+//! Dev wiki page on [Serial Ports](https://wiki.osdev.org/Serial_Ports).
 
 use core::fmt;
 /// Implements a logging facade over the underlying UART.

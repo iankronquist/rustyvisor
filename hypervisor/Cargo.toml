@@ -10,6 +10,7 @@ edition = "2018"
 spin = { version = "0.9" }
 log = { default-features = false, version = "0.4" }
 pcuart = { path= "../pcuart"}
+hypervisor_abi = { path= "../hypervisor_abi"}
 dmesg_logger = { path = "../dmesg_logger" }
 #x86 = "0.39.0"
 x86 = { git = "https://github.com/iankronquist/rust-x86" }

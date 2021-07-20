@@ -25,17 +25,40 @@
 #![feature(abi_efiapi)]
 #![warn(missing_docs)]
 
-extern crate hypervisor;
+extern crate hypervisor_abi;
 extern crate uefi;
+//extern crate uefi_services;
+extern crate log;
+
+use core::fmt::Write;
+
 use uefi::prelude::*;
 
-/// The entrypoint of the UEFI runtime service.
-/// Sets up the hypervisor and loads it on every core using the UEFI
-/// multi-processing protocol.
+/// The entrypoint of the UEFI application.
 #[no_mangle]
 pub extern "efiapi" fn efi_main(
     _image_handle: uefi::Handle,
-    _system_table: SystemTable<Boot>,
+    system_table: SystemTable<Boot>,
 ) -> Status {
-    Status::SUCCESS
+    let results = hypervisor_abi::invoke_hypercall(hypervisor_abi::HYPERCALL_REASON_VERSION);
+
+    let io_result = write!(
+        system_table.stdout(),
+        "Hypervisor version {}.{}.{}\r\n",
+        results.results[0],
+        results.results[1],
+        results.results[2]
+    );
+
+    match io_result {
+        Ok(()) => Status::SUCCESS,
+        Err(_) => Status::WARN_WRITE_FAILURE,
+    }
+}
+
+/// Handle Rust panics.
+/// Enters an infinite loop.
+#[panic_handler]
+pub extern "C" fn panic_fmt(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
 }

@@ -1,4 +1,3 @@
-use crate::hypercall;
 use crate::register_state::GeneralPurposeRegisterState;
 
 const HYPERVISOR_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -24,14 +23,14 @@ fn parse_version(version_string: &str) -> [u32; 3] {
 }
 
 /// Handle a hypercall.
-/// Expects gprs.rax to hold hypercall::HYPERCALL_MAGIC and gprs.rbx to hold a
+/// Expects gprs.rax to hold hypercall::HYPERCALL_MAGIC and gprs.rcx to hold a
 /// valid hypercall reason.
 pub fn handle_hypercall(gprs: &mut GeneralPurposeRegisterState) -> Result<(), x86::vmx::VmFail> {
-    assert_eq!(hypercall::HYPERCALL_MAGIC, gprs.rax as u32);
+    assert_eq!(hypervisor_abi::HYPERCALL_MAGIC, gprs.rax as u32);
 
-    let reason = gprs.rbx as u32;
+    let reason = gprs.rcx as u32;
     match reason {
-        hypercall::HYPERCALL_REASON_VERSION => {
+        hypervisor_abi::HYPERCALL_REASON_VERSION => {
             let version = parse_version(&HYPERVISOR_VERSION);
             gprs.rax = u64::from(version[0]);
             gprs.rbx = u64::from(version[1]);
