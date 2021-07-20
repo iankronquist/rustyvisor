@@ -1,4 +1,4 @@
-# RustyVisor  [![build_status](https://travis-ci.org/iankronquist/rustyvisor.svg?branch=master)](https://travis-ci.org/iankronquist/rustyvisor)
+# RustyVisor  [![build_status](https://travis-ci.com/iankronquist/rustyvisor.svg?branch=master)](https://travis-ci.com/iankronquist/rustyvisor)
 
 A hypervisor written in Rust.
 
