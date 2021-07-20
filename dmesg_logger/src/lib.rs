@@ -1,4 +1,9 @@
 #![no_std]
+#![warn(missing_docs)]
+
+//! A logging facade for writing logging information to the Linux Kernel System
+//! Log.
+
 use log;
 
 use core::fmt;
@@ -8,6 +13,7 @@ extern "C" {
     fn printk(fmt: *const u8, ...) -> i32;
 }
 
+/// A logger which writes to the Linux Kernel System Log.
 pub struct DMesgLogger {}
 
 struct PrintK {}
@@ -31,6 +37,9 @@ impl fmt::Write for PrintK {
 }
 
 impl DMesgLogger {
+    /// A function similar to core::fmt::Write, except that self is not
+    /// mutable, so we can use it without doing any locking. We let Linux
+    /// handle the locking for us.
     pub fn write_fmt(&self, args: core::fmt::Arguments) {
         let mut printk_obj = PrintK {};
         let _ = write!(printk_obj, "{}\r\n", args);

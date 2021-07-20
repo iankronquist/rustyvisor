@@ -2,8 +2,10 @@
 
 members = [
     "hypervisor",
+    "hypervisor_abi",
     "uefi",
     "pcuart",
     "linux",
     "dmesg_logger",
+    "rustyvctl",
 ]

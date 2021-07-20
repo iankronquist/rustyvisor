@@ -2,6 +2,7 @@
 #![feature(asm)]
 #![feature(lang_items)]
 #![allow(unknown_lints)]
+#![warn(missing_docs)]
 
 //! A library implementing a mostly-passthrough hypervisor.
 //! A mostly passthrough hypervisor mostly virtualizes the guest and does very
@@ -25,8 +26,10 @@
 //! 2. Once globally, call [rustyvisor_unload](fn.rustyvisor_unload.html)
 
 use ::log::{error, info, trace, LevelFilter};
+extern crate hypervisor_abi;
 
 mod debug;
+mod hypercall_handler;
 pub mod interrupt_controller;
 mod interrupts;
 mod isr;

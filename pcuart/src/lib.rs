@@ -1,15 +1,27 @@
 #![no_std]
 #![feature(asm)]
+#![warn(missing_docs)]
+
+//! A logging crate for writing logs to a PC's COM port.
+//! For more information see the Wikipedia page for the
+//! [16550 UART //chip](https://en.wikipedia.org/wiki/16550_UART), and the OS
+//! Dev wiki page on [Serial Ports](https://wiki.osdev.org/Serial_Ports).
 
 use core::fmt;
+/// Implements a logging facade over the underlying UART.
 pub mod logger;
 
+/// The port to be used by the UART object.
 #[derive(Copy, Clone)]
 #[repr(u16)]
 pub enum UartComPort {
+    /// COM1 port, with IO port 0x3f8
     Com1 = 0x3f8,
+    /// COM2 port, with IO port 0x2f8
     Com2 = 0x2f8,
+    /// COM3 port, with IO port 0x3e8
     Com3 = 0x3e8,
+    /// COM4 port, with IO port 0x4e8
     Com4 = 0x2e8,
 }
 
@@ -26,23 +38,30 @@ const UART_OFFSET_LINE_STATUS: u16 = 5;
 //const UART_OFFSET_MODEM_STATUS: u16 = 6;
 //const UART_OFFSET_SCRATCH: u16 = 7;
 
+/// A UART object.
 #[derive(Default)]
 pub struct Uart {
     io_port_base: u16,
 }
 
+/// The baud rate for the UART.
 #[derive(Copy, Clone)]
 pub enum UartBaudRate {
+    /// Configure the UART to use an 115200 baud rate.
     Baud115200 = 115200,
+    /// Configure the UART to use a 9600 baud rate.
     Baud9600 = 9600,
 }
 
 impl Uart {
+    /// Creates a new UART on the given COM port.
     pub const fn new(com: UartComPort) -> Self {
         Self {
             io_port_base: com as u16,
         }
     }
+
+    /// Configures the UART with the given baud rate.
     pub fn init(&self, enable_receiver_interrupts: bool, baud_rate: UartBaudRate) {
         outw(self.io_port_base + UART_OFFSET_INTERRUPT_ENABLE, 0x00);
         outw(self.io_port_base + UART_OFFSET_LINE_CONTROL, 0x80);
