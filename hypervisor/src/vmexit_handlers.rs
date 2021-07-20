@@ -29,6 +29,7 @@ fn advance_guest_rip() -> Result<(), x86::vmx::VmFail> {
 ///   call the hypercall handler.
 /// - Do not set the hypervisor bit, to be stealthy.
 fn handle_cpuid(gprs: &mut GeneralPurposeRegisterState) -> Result<(), x86::vmx::VmFail> {
+    advance_guest_rip()?;
     if gprs.rax as u32 == hypervisor_abi::HYPERCALL_MAGIC {
         return hypercall_handler::handle_hypercall(gprs);
     }
@@ -41,6 +42,7 @@ fn handle_cpuid(gprs: &mut GeneralPurposeRegisterState) -> Result<(), x86::vmx::
     gprs.rbx = u64::from(result.ebx);
     gprs.rcx = u64::from(result.ecx);
     gprs.rdx = u64::from(result.edx);
+
     Ok(())
 }
 
