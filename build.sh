@@ -1,5 +1,8 @@
 #!/bin/sh
 
+set -x
+set -e
+
 if [ "$1" = "clean" ] ; then
     cd uefi || exit 255
     cargo clean
