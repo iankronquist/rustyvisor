@@ -19,7 +19,6 @@ pub enum CPUIDLeaf {
 #[repr(u32)]
 pub enum CPUIDLeafProcessorInfoAndFeaturesECXBits {
     VMXAvailable = 1 << 5,
-    HypervisorPresent = 1 << 31,
 }
 
 pub const fn is_page_aligned(n: u64) -> bool {
@@ -57,7 +56,6 @@ pub fn read_dr7() -> u64 {
 fn vmx_available() -> bool {
     let result = unsafe { core::arch::x86_64::__cpuid(CPUIDLeaf::ProcessorInfoAndFeatures as u32) };
     result.ecx & (CPUIDLeafProcessorInfoAndFeaturesECXBits::VMXAvailable as u32) != 0
-        && result.ecx & (CPUIDLeafProcessorInfoAndFeaturesECXBits::HypervisorPresent as u32) == 0
 }
 
 /// Gets the current VMCS revision identifier.
