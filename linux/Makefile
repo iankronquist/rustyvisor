@@ -28,9 +28,12 @@ liblinux.o: $(RUST_LIB_PATH)
 	@cp $(realpath $<) $@
 	@echo "cmd_$(realpath $@) := cp $< $@" > .liblinux.o.cmd
 
+rust-only: $(RUST_LIB_PATH)
+
 clean:
 	$(MAKE) -C $(KDIR) M=$(PWD) clean
 
 clean-all: clean
 	$(CARGO) clean
 
+.PHONY: clean clean-all rust-only
