@@ -1,6 +1,8 @@
 //! This module handles hypervisor panics.
 #![cfg(not(test))]
 
+use core::arch::asm;
+
 use core::sync::atomic;
 
 use core::panic::PanicInfo;

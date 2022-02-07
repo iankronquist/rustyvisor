@@ -44,15 +44,6 @@ pub fn vmwrite(field: VmcsField, val: u64) -> Result<(), x86::vmx::VmFail> {
     unsafe { x86::bits64::vmx::vmwrite(field as u32, val) }
 }
 
-/// Read the contents of the current machine's dr7 (debug register 7).
-pub fn read_dr7() -> u64 {
-    let ret: u64;
-    unsafe {
-        asm!("mov {}, dr7", out(reg)(ret));
-    }
-    ret
-}
-
 /// Returns true if the Intel vmx extensions are available and a hypervisor is not present, false otherwise.
 fn vmx_available() -> bool {
     let result = unsafe { core::arch::x86_64::__cpuid(CPUIDLeaf::ProcessorInfoAndFeatures as u32) };

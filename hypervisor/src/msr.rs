@@ -5,6 +5,8 @@
 //! MSRs may be unique per core, unique per NUMA node, or global for the whole
 //! machine.
 
+use core::arch::asm;
+
 /// The values of various Model Specific Registers.
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone)]

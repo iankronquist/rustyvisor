@@ -1,5 +1,4 @@
 #![no_std]
-#![feature(asm)]
 #![feature(lang_items)]
 #![allow(unknown_lints)]
 #![warn(missing_docs)]
@@ -45,7 +44,7 @@ mod vmexit_handlers;
 mod vmexit_reasons;
 mod vmx;
 
-#[cfg(target_os = "uefi")]
+//#[cfg(target_os = "uefi")]
 use pcuart::logger;
 
 #[cfg(target_os = "uefi")]
@@ -56,14 +55,17 @@ pub static LOGGER: logger::UartLogger = logger::UartLogger::new(pcuart::UartComP
 pub static UNSYNCHRONIZED_LOGGER: logger::UnsynchronizedUartLogger =
     logger::UnsynchronizedUartLogger::new(pcuart::UartComPort::Com1);
 
-#[cfg(not(target_os = "uefi"))]
-use dmesg_logger as logger;
+//#[cfg(not(target_os = "uefi"))]
+//use dmesg_logger as logger;
 #[cfg(not(target_os = "uefi"))]
 /// Logger used by the hypervisor when loading the guest and while running.
-pub static LOGGER: logger::DMesgLogger = logger::DMesgLogger {};
+//pub static LOGGER: logger::DMesgLogger = logger::DMesgLogger {};
+pub static LOGGER: logger::UartLogger = logger::UartLogger::new(pcuart::UartComPort::Com1);
 #[cfg(not(target_os = "uefi"))]
 /// Logger used by the hypervisor when panicking.
-pub static UNSYNCHRONIZED_LOGGER: logger::DMesgLogger = logger::DMesgLogger {};
+pub static UNSYNCHRONIZED_LOGGER: logger::UnsynchronizedUartLogger =
+    logger::UnsynchronizedUartLogger::new(pcuart::UartComPort::Com1);
+//pub static UNSYNCHRONIZED_LOGGER: logger::DMesgLogger = logger::DMesgLogger {};
 
 /// This structure represents all of the data the hypervisor needs for a single CPU.
 /// The environment loader, e.g. UEFI bindings or linux kernel bindings, needs
