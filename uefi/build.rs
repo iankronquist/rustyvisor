@@ -30,12 +30,15 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .unwrap();
         }
         objs.push(obj);
+        println!("here {:x?}", objs);
 
-        println!("cargo:rerun-if-changed={}", filename);
+        //println!("cargo:rerun-if-changed={}", filename);
     }
 
     let mut args = vec![format!("-out:{}", full_lib)];
     args.append(&mut objs);
+    println!("{:x?}", full_lib);
+    println!("{:x?}", args);
     Command::new("llvm-lib")
         .args(args)
         .current_dir(&Path::new(&out_dir))

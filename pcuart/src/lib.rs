@@ -1,5 +1,4 @@
 #![no_std]
-#![feature(asm)]
 #![warn(missing_docs)]
 
 //! A logging crate for writing logs to a PC's COM port.

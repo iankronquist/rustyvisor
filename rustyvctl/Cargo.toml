@@ -8,5 +8,6 @@ edition = "2018"
 [dependencies]
 hypervisor_abi = { path = "../hypervisor_abi" }
 uefi = "0.11.0"
-x86 = { git = "https://github.com/iankronquist/rust-x86" }
+#x86 = { git = "https://github.com/iankronquist/rust-x86" }
+x86 = "0.46.0"
 log = { default-features = false, version = "0.4" }

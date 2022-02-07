@@ -3,7 +3,7 @@
 use crate::msr::{rdmsr, rdmsrl, Msr};
 use crate::segmentation::{get_current_gdt, unpack_gdt_entry};
 use crate::vmcs_fields::*;
-use crate::vmx::{read_dr7, vmread, vmwrite};
+use crate::vmx::{vmread, vmwrite};
 use crate::VCpu;
 use core::convert::TryFrom;
 use log::{trace, warn};
@@ -140,7 +140,7 @@ pub fn initialize_guest_state(_vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
     )?;
     vmwrite(VmcsField::GuestSsBase, ss_unpacked.base)?;
 
-    let tr = x86::task::tr();
+    let tr = unsafe { x86::task::tr() };
     let tr_unpacked = unpack_gdt_entry(gdt, tr.bits());
     vmwrite(VmcsField::GuestTrSelector, u64::from(tr_unpacked.selector))?;
     vmwrite(VmcsField::GuestTrLimit, tr_unpacked.limit)?;
@@ -179,8 +179,8 @@ pub fn initialize_guest_state(_vcpu: &VCpu) -> Result<(), x86::vmx::VmFail> {
     vmwrite(VmcsField::GuestCr0, cr0.bits() as u64)?;
     //vmwrite(VmcsField::GuestCr0ReadShadow, cr0)?;
     vmwrite(VmcsField::GuestIA32Debugctl, rdmsrl(Msr::Ia32DebugControl))?;
-    let dr7 = read_dr7();
-    vmwrite(VmcsField::GuestDr7, dr7)?;
+    let dr7 = unsafe { x86::debugregs::dr7() };
+    vmwrite(VmcsField::GuestDr7, dr7.0 as u64)?;
 
     Ok(())
 }
