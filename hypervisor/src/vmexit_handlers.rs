@@ -8,6 +8,7 @@ use crate::vmexit_reasons::*;
 use crate::vmx;
 use crate::vmx::vmread;
 use crate::vmx::vmwrite;
+use crate::VCpu;
 use log::trace;
 
 /// Advance the guest's instruction pointer by the length of the instruction
@@ -29,6 +30,7 @@ fn advance_guest_rip() -> Result<(), x86::vmx::VmFail> {
 ///   call the hypercall handler.
 /// - Do not set the hypervisor bit, to be stealthy.
 fn handle_cpuid(gprs: &mut GeneralPurposeRegisterState) -> Result<(), x86::vmx::VmFail> {
+    trace!("cpuid with gprs {:x?}", gprs);
     advance_guest_rip()?;
     if gprs.rax as u32 == hypervisor_abi::HYPERCALL_MAGIC {
         return hypercall_handler::handle_hypercall(gprs);
@@ -43,6 +45,7 @@ fn handle_cpuid(gprs: &mut GeneralPurposeRegisterState) -> Result<(), x86::vmx::
     gprs.rcx = u64::from(result.ecx);
     gprs.rdx = u64::from(result.edx);
 
+    trace!("new gprs {:x?}", gprs);
     Ok(())
 }
 
@@ -108,8 +111,10 @@ fn handle_control_register_access(
 /// The guest will be resumed using the current vmcs and the guest general
 /// purpose register state when this function returns.
 #[no_mangle]
-pub extern "C" fn hypervisor_handle_vmexit(gprs: *mut GeneralPurposeRegisterState) {
-    let gprs = unsafe { &mut *gprs };
+pub extern "C" fn hypervisor_handle_vmexit(_vcpu: *mut VCpu) {
+    let vcpu = crate::vcpu::get_current_vcpu();
+    //trace!("vcpu fs {:x?}", vcpu_fs);
+    let gprs = unsafe { &mut (*vcpu).general_purpose_registers };
     let vmexit_reasion = vmread(VmcsField::VmExitReason).expect("vm exit reason shouldn't error");
     let qualification = vmread(VmcsField::ExitQualificatIon).unwrap_or(0);
     match vmexit_reasion {

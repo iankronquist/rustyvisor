@@ -55,7 +55,7 @@ mouse: type=ps2, enabled=false, toggle=ctrl+mbutton
 #speaker: enabled=true, mode=sound
 parport1: enabled=true, file=none
 parport2: enabled=false
-com1: enabled=true, turbo=true, mode=socket-server, dev="localhost:14449"
+com1: enabled=true, turbo=true, mode=socket-server, dev="localhost:14448"
 com2: enabled=false
 com3: enabled=false
 com4: enabled=false

@@ -77,7 +77,7 @@ pub static UNSYNCHRONIZED_LOGGER: logger::UnsynchronizedUartLogger =
 /// the environment loader in another language like C.
 /// Physical addresses are represented as u64s.
 #[derive(Debug)]
-#[repr(C)]
+#[repr(C, align(16))]
 pub struct VCpu {
     /// A pointer to the virtual address representing this VCpu structure.
     /// In hypervisor host context we will set the fs base to point to this
@@ -85,10 +85,19 @@ pub struct VCpu {
     /// fs:0. See [get_current_vcpu](vcpu/fn.get_current_vcpu.html) for more
     /// details.
     pub this_vcpu: *mut VCpu,
+
+    // FIXME note well that the layout here is delicate and prescribed by the host entrypoint
+    // static_assert(offsetof(VCpu, this_vcpu) == 0);
+    // static_assert(offsetof(VCpu, general_purpose_registers) == 8);
+    // static_assert(offsetof(VCpu, fxsave_area) == 0x80);
+    pub general_purpose_registers: register_state::GeneralPurposeRegisterState,
+    pub fxsave_area: register_state::FxSaveArea,
+
     /// The virtual address of this core's vmx on region. This is used by the
     /// hardware as scratch space and its contents are largely opaque to the
     /// hypervisor. Must be at least a page.
     pub vmxon_region: *mut u32,
+
     /// A pointer to this core's virtual machine control structure.
     /// The virtual machine control structure, or vmcs, is used to control the
     /// state of the processor when entering and exiting virtualization, as
@@ -120,6 +129,11 @@ pub struct VCpu {
     /// The limit, or size in bytes minus one, of the host's global descriptor
     /// table. Get using the instruction sgdt.
     pub host_gdt_limit: u64,
+    /// Since VCpu has an alignment of 16, but underlying allocators may return
+    /// allocations with different alignments (e.g. the UEFI allocator returns
+    /// memory with an alignment of 8), stash the actual pointer we should free
+    /// here.
+    pub vcpu_allocation_start: *mut u8,
     /// The virtual address of the host's virtual interrupt controller. Must be
     /// initialized as zeroes.
     pub virtual_local_interrupt_controller:
@@ -175,6 +189,13 @@ pub extern "C" fn rustyvisor_load() -> i32 {
 /// 4. Once globally, call [rustyvisor_unload](fn.rustyvisor_unload.html)
 #[no_mangle]
 pub extern "C" fn rustyvisor_core_load(data: &VCpu) -> i32 {
+    if (data as *const VCpu as usize) % 16 != 0 {
+        error!(
+            "VCPU in rustyvisor is not properly aligned {:x?}",
+            data as *const VCpu
+        );
+        return -1;
+    }
     trace!(
         "VCPU in rustyvisor_core_load {:x?} {:x?}\r\n",
         data,

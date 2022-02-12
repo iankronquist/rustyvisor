@@ -30,9 +30,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .unwrap();
         }
         objs.push(obj);
-        println!("here {:x?}", objs);
 
-        //println!("cargo:rerun-if-changed={}", filename);
+        println!("cargo:rerun-if-changed={}", filename);
     }
 
     let mut args = vec![format!("-out:{}", full_lib)];

@@ -33,6 +33,7 @@ pub enum Msr {
     Ia32VmxTrueExitControls = 0x0000_048f,
     Ia32VmxTrueEntryControls = 0x0000_0490,
     Ia32VmxVmFunc = 0x0000_0491,
+    Ia32TscAux = 0xc0000103,
 }
 
 /// Represents the value of an Model specific register.

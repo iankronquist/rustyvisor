@@ -7,26 +7,26 @@
 #[derive(Debug)]
 #[repr(C)]
 pub struct GeneralPurposeRegisterState {
-    pub r15: u64,
-    pub r14: u64,
-    pub r13: u64,
-    pub r12: u64,
-    pub r11: u64,
-    pub r10: u64,
-    pub r9: u64,
-    pub r8: u64,
-    pub rdi: u64,
-    pub rsi: u64,
-    pub rbp: u64,
-    pub rdx: u64,
-    pub rcx: u64,
-    pub rbx: u64,
     pub rax: u64,
+    pub rbx: u64,
+    pub rcx: u64,
+    pub rdx: u64,
+    pub rbp: u64,
+    pub rsi: u64,
+    pub rdi: u64,
+    pub r8: u64,
+    pub r9: u64,
+    pub r10: u64,
+    pub r11: u64,
+    pub r12: u64,
+    pub r13: u64,
+    pub r14: u64,
+    pub r15: u64,
 }
 
 impl GeneralPurposeRegisterState {
     /// Returns a mutable reference to a register in the GeneralPurposeRegisterState or None if that register is not in the state.
-    /// Note that rsp is note in GeneralPurposeRegisterState.
+    /// Note that rsp is not in GeneralPurposeRegisterState.
     ///
     /// This order is related to the encoding of the mod rm byte and is widely used throughout various vmcs fields.
     /// For more information about the mod rm byte, see Vol 2. Section 2.1.3 particularly Table 2-2. "32-Bit Addressing Forms with the ModR/M Byte".
@@ -72,4 +72,12 @@ pub struct InterruptRegisterState {
     rflags: u64,
     rsp: u64,
     ss: u64,
+}
+
+/// The FXSave area used by the fxsave and fxrestore instructions.
+/// See Vol 1, section 13.4.1, especially table 13-1.
+#[derive(Debug)]
+#[repr(C, align(16))]
+pub struct FxSaveArea {
+    bytes: [u8; 512],
 }

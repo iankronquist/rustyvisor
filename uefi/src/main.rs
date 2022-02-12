@@ -51,18 +51,47 @@ extern "C" {
     static __ImageBase: u8;
 }
 
+struct EfiAlignedAllocation {
+    actual_allocation: *mut u8,
+    aligned_allocation: *mut u128,
+}
+
+fn efi_allocate_aligned_by_16(
+    system_table: &SystemTable<Boot>,
+    bytes: usize,
+) -> Result<EfiAlignedAllocation, uefi::Status> {
+    let real_bytes = bytes + 16;
+    let actual_allocation = match system_table
+        .boot_services()
+        .allocate_pool(MemoryType::RUNTIME_SERVICES_DATA, real_bytes)
+    {
+        Ok(completion_and_ptr) => completion_and_ptr.split().1,
+        Err(e) => return Err(e.status()),
+    };
+    let aligned_allocation = if ((actual_allocation as usize) % 16) == 0 {
+        actual_allocation as *mut u128
+    } else {
+        ((actual_allocation as usize + 16) & (!0xFusize)) as *mut u128
+    };
+
+    Ok(EfiAlignedAllocation {
+        actual_allocation,
+        aligned_allocation,
+    })
+}
+
 /// Size of a page in bytes.
 const PAGE_SIZE: usize = 0x1000;
 
 /// Allocate and initialize a VCpu.
 fn efi_create_vcpu(system_table: &SystemTable<Boot>) -> uefi::Result<*mut hypervisor::VCpu> {
-    let vcpu = system_table
-        .boot_services()
-        .allocate_pool(
-            MemoryType::RUNTIME_SERVICES_DATA,
-            core::mem::size_of::<hypervisor::VCpu>(),
-        )?
-        .expect("Allocation completed") as *mut hypervisor::VCpu;
+    let vcpu_aligned_allocation_pair =
+        efi_allocate_aligned_by_16(system_table, core::mem::size_of::<hypervisor::VCpu>())
+            .expect("Allocation completed");
+    let vcpu = vcpu_aligned_allocation_pair.aligned_allocation as *mut hypervisor::VCpu;
+    unsafe {
+        (*vcpu).vcpu_allocation_start = vcpu_aligned_allocation_pair.actual_allocation;
+    }
 
     let tss = system_table
         .boot_services()

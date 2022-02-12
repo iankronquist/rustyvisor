@@ -9,6 +9,40 @@ use core::convert::TryFrom;
 use log::{trace, warn};
 use x86::dtables;
 
+/*
+enum VmcsState {
+    Idle(CpuHandle),
+    Acquired(CpuHandle),
+    Running(CpuHandle),
+}
+
+struct AcquiredVmcs {}
+
+pub struct Vmcs {
+    is_running: AtomicBool,
+    running_cpu: u64,
+    phys: u64,
+}
+
+
+impl Vmcs {
+    pub fn load(&self) -> Result<()> {
+        unsafe { x86::bits64::vmx::vmptrld(self.phys) }
+    }
+    pub fn vmread(&self, field: VmcsField) -> Result<u64, x86::vmx::VmFail> {
+        unsafe { x86::bits64::vmx::vmread(field as u32) }
+    }
+
+    pub fn vmwrite(&self, field: VmcsField, val: u64) -> Result<(), x86::vmx::VmFail> {
+        unsafe { x86::bits64::vmx::vmwrite(field as u32, val) }
+    }
+
+    fn get_current_core(&self) -> u32 {
+        rdmsr(Msr::Ia32TscAux).eax
+    }
+}
+*/
+
 extern "C" {
     /// The host entrypoint function.
     /// Implemented externally in assembly.
